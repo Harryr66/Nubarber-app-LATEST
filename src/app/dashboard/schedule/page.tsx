@@ -311,7 +311,7 @@ export default function SchedulePage() {
             <DialogTrigger asChild>
                 <Button><PlusCircle className="mr-2"/>Book Time Off</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Book Time Off</DialogTitle>
                     <DialogDescription>Select a staff member and date range to block off their schedule.</DialogDescription>
@@ -328,7 +328,7 @@ export default function SchedulePage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4">
                         <div className="space-y-2">
                             <Label>Start Date</Label>
                             <Popover>
@@ -368,6 +368,12 @@ export default function SchedulePage() {
                             </Popover>
                         </div>
                     </div>
+                    {/* Debug info */}
+                    <div className="text-xs text-muted-foreground p-2 bg-blue-50 rounded border">
+                        <p>Start Date: {timeOffStartDate ? timeOffStartDate.toLocaleDateString() : 'Not selected'}</p>
+                        <p>End Date: {timeOffEndDate ? timeOffEndDate.toLocaleDateString() : 'Not selected'}</p>
+                    </div>
+                    
                     {timeOffStartDate && timeOffEndDate && (
                         <div className="text-sm text-muted-foreground text-center p-2 bg-muted rounded-md">
                             {formatTimeOffDuration(timeOffStartDate, timeOffEndDate)} of time off
