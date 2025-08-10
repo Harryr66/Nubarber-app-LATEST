@@ -74,6 +74,22 @@ export function DashboardSidebar() {
     return email ? email.substring(0, 2).toUpperCase() : 'U';
   }
 
+  const getDisplayEmail = (email: string | null | undefined) => {
+    if (!email) return "User";
+    
+    // For very long emails, show initials + domain
+    if (email.length > 25) {
+      const atIndex = email.indexOf('@');
+      if (atIndex > 0) {
+        const initials = email.substring(0, 2).toUpperCase();
+        const domain = email.substring(atIndex);
+        return `${initials}${domain}`;
+      }
+    }
+    
+    return email;
+  }
+
   return (
     <Sidebar>
       <SidebarHeader className="py-4">
@@ -106,16 +122,26 @@ export function DashboardSidebar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={!user}>
             <Button variant="ghost" className="w-full justify-start p-2 h-auto">
-              <div className="flex items-center gap-3 w-full">
-                <Avatar className="h-8 w-8">
+              <div className="flex items-center gap-1 w-full">
+                <Avatar className="h-7 w-7">
                   <AvatarImage src="" alt="User" />
-                  <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
+                  <AvatarFallback className="text-xs">{getInitials(user?.email)}</AvatarFallback>
                 </Avatar>
-                <div className="text-left group-data-[collapsible=icon]:hidden">
-                  <p className="font-medium text-sm truncate">{user?.email || "User"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{shopName}</p>
+                <div className="text-left group-data-[collapsible=icon]:hidden min-w-0 flex-1 overflow-hidden max-w-[110px] text-ellipsis">
+                  <p 
+                    className="font-medium text-[10px] truncate leading-tight text-foreground" 
+                    title={user?.email || "User"}
+                  >
+                    {getDisplayEmail(user?.email)}
+                  </p>
+                  <p 
+                    className="text-[10px] text-muted-foreground truncate leading-tight"
+                    title={shopName}
+                  >
+                    {shopName}
+                  </p>
                 </div>
-                <ChevronDown className="h-4 w-4 ml-auto group-data-[collapsible=icon]:hidden" />
+                <ChevronDown className="h-3 w-3 ml-auto group-data-[collapsible=icon]:hidden" />
               </div>
             </Button>
           </DropdownMenuTrigger>

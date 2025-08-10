@@ -14,7 +14,7 @@ import { Copy, Eye, Upload, X, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { uploadFile } from '@/lib/utils';
+import { uploadLogoFile } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function PublicSitePage() {
@@ -83,33 +83,140 @@ export default function PublicSitePage() {
       return;
     }
     
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "File Too Large", description: "Please select an image smaller than 5MB.", variant: "destructive" });
+    // Validate file size (max 2MB for better performance)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File Too Large", description: "Please select an image smaller than 2MB for faster upload.", variant: "destructive" });
       return;
     }
     
     setIsUploading(true);
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        // Optimize image before upload
+        const optimizedFile = await optimizeImage(file);
+        
+        // Generate unique filename with timestamp
+        const timestamp = Date.now();
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `logo_${timestamp}.${fileExtension}`;
+        const path = `logos/${user.uid}/${fileName}`;
+        
+        // Upload with progress tracking
+        const downloadURL = await uploadLogoFile(optimizedFile, path);
+        
+        // Clean up old logo file if it exists
+        if (logoUrl && logoUrl !== downloadURL) {
+          try {
+            await deleteOldLogo(logoUrl);
+          } catch (error) {
+            console.warn('Could not delete old logo:', error);
+          }
+        }
+        
+        setLogoUrl(downloadURL);
+        
+        // Save to Firestore
+        const shopDocRef = doc(defaultDb, "shops", user.uid);
+        await setDoc(shopDocRef, { logoUrl: downloadURL }, { merge: true });
+        
+        toast({
+          title: "Success!",
+          description: "Logo uploaded and optimized successfully.",
+        });
+        break; // Success, exit retry loop
+        
+      } catch (error) {
+        retryCount++;
+        console.error(`Error uploading logo (attempt ${retryCount}):`, error);
+        
+        if (retryCount > maxRetries) {
+          toast({ 
+            title: "Upload Failed", 
+            description: "Could not upload logo after multiple attempts. Please try again.", 
+            variant: "destructive" 
+          });
+        } else {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+    }
+    
+    setIsUploading(false);
+  };
+
+  // Delete old logo file from storage
+  const deleteOldLogo = async (oldLogoUrl: string) => {
+    if (!user) return;
+    
     try {
-      const path = `logos/${user.uid}/${file.name}`;
-      const downloadURL = await uploadFile(file, path);
-      setLogoUrl(downloadURL);
+      const { getFirebaseStorage } = await import('@/lib/firebase');
+      const storage = getFirebaseStorage();
+      const { ref, deleteObject } = await import('firebase/storage');
       
-      // Save to Firestore
-      const shopDocRef = doc(defaultDb, "shops", user.uid);
-      await setDoc(shopDocRef, { logoUrl: downloadURL }, { merge: true });
+      // Extract the path from the URL
+      const urlParts = oldLogoUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      const path = `logos/${user.uid}/${fileName}`;
       
-      toast({
-        title: "Success!",
-        description: "Logo uploaded successfully.",
-      });
+      const oldLogoRef = ref(storage, path);
+      await deleteObject(oldLogoRef);
     } catch (error) {
-      console.error("Error uploading logo:", error);
-      toast({ title: "Error", description: "Could not upload logo. Please try again.", variant: "destructive" });
-    } finally {
-      setIsUploading(false);
+      console.error('Error deleting old logo:', error);
+      throw error;
     }
   };
+
+  // Image optimization function
+  const optimizeImage = async (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate optimal dimensions (max 500x500 for logos)
+        const maxSize = 500;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress image
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const optimizedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now()
+            });
+            resolve(optimizedFile);
+          } else {
+            resolve(file); // Fallback to original if optimization fails
+          }
+        }, 'image/jpeg', 0.8); // 80% quality for good balance
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+
 
   const handleSave = async () => {
     if (!user || !defaultDb) {
@@ -214,8 +321,25 @@ export default function PublicSitePage() {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Upload your shop logo. This will be displayed prominently on your public booking page.
+                          Upload your shop logo (max 2MB). This will be displayed prominently on your public booking page.
                         </p>
+                        <p className="text-xs text-muted-foreground">
+                          Recommended: Square image, 500x500 pixels or smaller for best performance.
+                        </p>
+                        {isUploading && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm text-blue-600">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Processing image and uploading...</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-blue-600 h-2 rounded-full animate-pulse"></div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              This may take a few moments for larger images...
+                            </p>
+                          </div>
+                        )}
                         <input
                           ref={fileInputRef}
                           type="file"
