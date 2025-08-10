@@ -87,9 +87,40 @@ export default function SchedulePage() {
         ]);
 
         const bookings = bookingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
-        setAllBookings(bookings.sort((a, b) => a.bookingTime.toMillis() - b.bookingTime.toMillis()));
+        // Filter out invalid bookings and sort valid ones
+        const validBookings = bookings.filter(booking => {
+          if (!booking.bookingTime) {
+            console.warn('Invalid booking record:', booking);
+            return false;
+          }
+          return true;
+        });
+        
+        setAllBookings(validBookings.sort((a, b) => a.bookingTime.toMillis() - b.bookingTime.toMillis()));
 
-        const timeOffs = timeOffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimeOff));
+        const timeOffs = timeOffSnapshot.docs.map(doc => {
+          const data = doc.data();
+          // Handle both old and new data structures for backward compatibility
+          if (data.date && !data.startDate) {
+            // Old structure - convert to new structure
+            return {
+              id: doc.id,
+              staffId: data.staffId || '',
+              staffName: data.staffName || 'Unknown Staff',
+              startDate: data.date,
+              endDate: data.date, // Use same date for both start and end
+              reason: data.reason || 'Personal Time Off'
+            } as TimeOff;
+          } else if (data.startDate && data.endDate) {
+            // New structure
+            return { id: doc.id, ...data } as TimeOff;
+          } else {
+            // Invalid data structure - skip this record
+            console.warn('Invalid time off record structure:', data);
+            return null;
+          }
+        }).filter(Boolean) as TimeOff[];
+        
         setTimeOffEvents(timeOffs);
         
         const staffList = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StaffMember));
@@ -116,8 +147,17 @@ export default function SchedulePage() {
     const density: Record<string, number> = {};
     const dailyBookings: Record<string, number> = {};
     allBookings.forEach(booking => {
-        const dayKey = booking.bookingTime.toDate().toISOString().split('T')[0];
-        dailyBookings[dayKey] = (dailyBookings[dayKey] || 0) + 1;
+        // Safety check to ensure bookingTime exists
+        if (!booking.bookingTime) {
+          console.warn('Invalid booking record in density calculation:', booking);
+          return;
+        }
+        try {
+          const dayKey = booking.bookingTime.toDate().toISOString().split('T')[0];
+          dailyBookings[dayKey] = (dailyBookings[dayKey] || 0) + 1;
+        } catch (error) {
+          console.error('Error processing booking in density calculation:', error, booking);
+        }
     });
 
     // Calculate density for each day in dailyBookings
@@ -195,14 +235,36 @@ export default function SchedulePage() {
   }
 
   const selectedDayBookings = date 
-    ? allBookings.filter(booking => isSameDay(booking.bookingTime.toDate(), date))
+    ? allBookings.filter(booking => {
+        // Safety check to ensure bookingTime exists
+        if (!booking.bookingTime) {
+          console.warn('Invalid booking record:', booking);
+          return false;
+        }
+        try {
+          return isSameDay(booking.bookingTime.toDate(), date);
+        } catch (error) {
+          console.error('Error processing booking:', error, booking);
+          return false;
+        }
+      })
     : [];
   
   const selectedDayTimeOffs = date
     ? timeOffEvents.filter(event => {
-        const startDate = event.startDate.toDate();
-        const endDate = event.endDate.toDate();
-        return date >= startDate && date <= endDate;
+        // Safety check to ensure startDate and endDate exist and are valid
+        if (!event.startDate || !event.endDate) {
+          console.warn('Invalid time off event:', event);
+          return false;
+        }
+        try {
+          const startDate = event.startDate.toDate();
+          const endDate = event.endDate.toDate();
+          return date >= startDate && date <= endDate;
+        } catch (error) {
+          console.error('Error processing time off event:', error, event);
+          return false;
+        }
       })
     : [];
     
@@ -228,13 +290,18 @@ export default function SchedulePage() {
   };
 
   const formatTimeOffDuration = (startDate: Date, endDate: Date) => {
-    const days = differenceInDays(endDate, startDate) + 1;
-    if (days === 1) return "1 day";
-    if (days === 7) return "1 week";
-    if (days === 14) return "2 weeks";
-    if (days === 21) return "3 weeks";
-    if (days === 30 || days === 31) return "1 month";
-    return `${days} days`;
+    try {
+      const days = differenceInDays(endDate, startDate) + 1;
+      if (days === 1) return "1 day";
+      if (days === 7) return "1 week";
+      if (days === 14) return "2 weeks";
+      if (days === 21) return "3 weeks";
+      if (days === 30 || days === 31) return "1 month";
+      return `${days} days`;
+    } catch (error) {
+      console.error('Error formatting time off duration:', error);
+      return "Unknown duration";
+    }
   };
 
   return (
@@ -356,15 +423,33 @@ export default function SchedulePage() {
                         const isSelected = isSameDay(dayDate, date || new Date());
                         const isOutside = dayDate.getMonth() !== displayMonth.getMonth();
                         const isTimeOff = timeOffEvents.some(event => {
-                            const start = event.startDate.toDate();
-                            const end = event.endDate.toDate();
-                            return dayDate >= start && dayDate <= end;
+                            // Safety check to ensure startDate and endDate exist
+                            if (!event.startDate || !event.endDate) {
+                              return false;
+                            }
+                            try {
+                              const start = event.startDate.toDate();
+                              const end = event.endDate.toDate();
+                              return dayDate >= start && dayDate <= end;
+                            } catch (error) {
+                              console.error('Error processing time off event in calendar:', error, event);
+                              return false;
+                            }
                         });
                         
                         const timeOffEvent = timeOffEvents.find(event => {
-                            const start = event.startDate.toDate();
-                            const end = event.endDate.toDate();
-                            return dayDate >= start && dayDate <= end;
+                            // Safety check to ensure startDate and endDate exist
+                            if (!event.startDate || !event.endDate) {
+                              return false;
+                            }
+                            try {
+                              const start = event.startDate.toDate();
+                              const end = event.endDate.toDate();
+                              return dayDate >= start && dayDate <= end;
+                            } catch (error) {
+                              console.error('Error processing time off event in calendar:', error, event);
+                              return false;
+                            }
                         });
                         
                         return (
@@ -407,7 +492,11 @@ export default function SchedulePage() {
                   {selectedDayBookings.map((appt) => (
                     <li key={appt.id} className="p-3 bg-muted rounded-lg">
                       <p className="font-semibold">
-                        {appt.bookingTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {appt.customerName}
+                        {appt.bookingTime ? (
+                          appt.bookingTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        ) : (
+                          'Invalid time'
+                        )} - {appt.customerName}
                       </p>
                       <p className="text-sm text-muted-foreground">{appt.serviceName}</p>
                     </li>
@@ -419,10 +508,16 @@ export default function SchedulePage() {
                             Time Off - {event.staffName}
                           </p>
                           <p className="text-sm text-red-700">
-                            {event.startDate.toDate().toLocaleDateString()} - {event.endDate.toDate().toLocaleDateString()}
-                            <span className="ml-2 text-xs bg-red-200 px-2 py-1 rounded-full">
-                              {formatTimeOffDuration(event.startDate.toDate(), event.endDate.toDate())}
-                            </span>
+                            {event.startDate && event.endDate ? (
+                              <>
+                                {event.startDate.toDate().toLocaleDateString()} - {event.endDate.toDate().toLocaleDateString()}
+                                <span className="ml-2 text-xs bg-red-200 px-2 py-1 rounded-full">
+                                  {formatTimeOffDuration(event.startDate.toDate(), event.endDate.toDate())}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-red-600">Invalid date range</span>
+                            )}
                           </p>
                           {event.reason && (
                             <p className="text-sm text-red-700">{event.reason}</p>
