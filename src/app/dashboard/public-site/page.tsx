@@ -89,63 +89,108 @@ export default function PublicSitePage() {
       return;
     }
     
+    // Add a simple fallback for very small files (skip optimization)
+    const shouldSkipOptimization = file.size < 100 * 1024; // Skip optimization for files under 100KB
+    
     setIsUploading(true);
     let retryCount = 0;
     const maxRetries = 2;
     
-    while (retryCount <= maxRetries) {
-      try {
-        // Optimize image before upload
-        const optimizedFile = await optimizeImage(file);
-        
-        // Generate unique filename with timestamp
-        const timestamp = Date.now();
-        const fileExtension = file.name.split('.').pop();
-        const fileName = `logo_${timestamp}.${fileExtension}`;
-        const path = `logos/${user.uid}/${fileName}`;
-        
-        // Upload with progress tracking
-        const downloadURL = await uploadLogoFile(optimizedFile, path);
-        
-        // Clean up old logo file if it exists
-        if (logoUrl && logoUrl !== downloadURL) {
-          try {
-            await deleteOldLogo(logoUrl);
-          } catch (error) {
-            console.warn('Could not delete old logo:', error);
+        // Add overall timeout protection
+    const uploadTimeout = setTimeout(() => {
+      setIsUploading(false);
+      toast({ 
+        title: "Upload Timeout", 
+        description: "Upload took too long. Please try again with a smaller image.", 
+        variant: "destructive" 
+      });
+    }, 30000); // 30 second timeout
+    
+    try {
+      while (retryCount <= maxRetries) {
+        try {
+          let fileToUpload = file;
+          
+          // Try to optimize image, but fallback to original if it fails
+          if (shouldSkipOptimization) {
+            console.log('Skipping optimization for small file');
+            fileToUpload = file;
+          } else {
+            try {
+              fileToUpload = await optimizeImage(file);
+              console.log('Image optimization successful');
+            } catch (optimizeError) {
+              console.warn('Image optimization failed, using original file:', optimizeError);
+              fileToUpload = file;
+            }
+          }
+          
+          // Generate unique filename with timestamp
+          const timestamp = Date.now();
+          const fileExtension = file.name.split('.').pop();
+          const fileName = `logo_${timestamp}.${fileExtension}`;
+          const path = `logos/${user.uid}/${fileName}`;
+          
+          console.log('Starting upload to path:', path);
+          
+          // Upload with progress tracking
+          const downloadURL = await uploadLogoFile(fileToUpload, path);
+          
+          console.log('Upload successful, download URL:', downloadURL);
+          
+          // Clean up old logo file if it exists
+          if (logoUrl && logoUrl !== downloadURL) {
+            try {
+              await deleteOldLogo(logoUrl);
+            } catch (error) {
+              console.warn('Could not delete old logo:', error);
+              // Continue even if cleanup fails
+            }
+          }
+          
+          setLogoUrl(downloadURL);
+          
+          // Save to Firestore
+          const shopDocRef = doc(defaultDb, "shops", user.uid);
+          await setDoc(shopDocRef, { logoUrl: downloadURL }, { merge: true });
+          
+          toast({
+            title: "Success!",
+            description: "Logo uploaded successfully.",
+          });
+          
+          clearTimeout(uploadTimeout);
+          setIsUploading(false);
+          return; // Success, exit function
+          
+        } catch (error) {
+          retryCount++;
+          console.error(`Error uploading logo (attempt ${retryCount}):`, error);
+          
+          if (retryCount > maxRetries) {
+            toast({ 
+              title: "Upload Failed", 
+              description: "Could not upload logo after multiple attempts. Please try again.", 
+              variant: "destructive" 
+            });
+            break;
+          } else {
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
           }
         }
-        
-        setLogoUrl(downloadURL);
-        
-        // Save to Firestore
-        const shopDocRef = doc(defaultDb, "shops", user.uid);
-        await setDoc(shopDocRef, { logoUrl: downloadURL }, { merge: true });
-        
-        toast({
-          title: "Success!",
-          description: "Logo uploaded and optimized successfully.",
-        });
-        break; // Success, exit retry loop
-        
-      } catch (error) {
-        retryCount++;
-        console.error(`Error uploading logo (attempt ${retryCount}):`, error);
-        
-        if (retryCount > maxRetries) {
-          toast({ 
-            title: "Upload Failed", 
-            description: "Could not upload logo after multiple attempts. Please try again.", 
-            variant: "destructive" 
-          });
-        } else {
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-        }
       }
+    } catch (error) {
+      console.error('Unexpected error during upload:', error);
+      toast({ 
+        title: "Upload Error", 
+        description: "An unexpected error occurred. Please try again.", 
+        variant: "destructive" 
+      });
+    } finally {
+      clearTimeout(uploadTimeout);
+      setIsUploading(false);
     }
-    
-    setIsUploading(false);
   };
 
   // Delete old logo file from storage
@@ -170,48 +215,74 @@ export default function PublicSitePage() {
     }
   };
 
-  // Image optimization function
+  // Image optimization function with proper error handling
   const optimizeImage = async (file: File): Promise<File> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
       
+      // Add timeout protection
+      const timeout = setTimeout(() => {
+        reject(new Error('Image optimization timeout'));
+      }, 10000); // 10 second timeout
+      
       img.onload = () => {
-        // Calculate optimal dimensions (max 500x500 for logos)
-        const maxSize = 500;
-        let { width, height } = img;
-        
-        if (width > height) {
-          if (width > maxSize) {
-            height = (height * maxSize) / width;
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width = (width * maxSize) / height;
-            height = maxSize;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Draw and compress image
-        ctx?.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const optimizedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now()
-            });
-            resolve(optimizedFile);
+        try {
+          clearTimeout(timeout);
+          
+          // Calculate optimal dimensions (max 500x500 for logos)
+          const maxSize = 500;
+          let { width, height } = img;
+          
+          if (width > height) {
+            if (width > maxSize) {
+              height = (height * maxSize) / width;
+              width = maxSize;
+            }
           } else {
-            resolve(file); // Fallback to original if optimization fails
+            if (height > maxSize) {
+              width = (width * maxSize) / height;
+              height = maxSize;
+            }
           }
-        }, 'image/jpeg', 0.8); // 80% quality for good balance
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw and compress image
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const optimizedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(optimizedFile);
+              } else {
+                console.warn('Canvas toBlob failed, using original file');
+                resolve(file); // Fallback to original if optimization fails
+              }
+            }, 'image/jpeg', 0.8); // 80% quality for good balance
+          } else {
+            console.warn('Canvas context not available, using original file');
+            resolve(file);
+          }
+        } catch (error) {
+          console.error('Error during image optimization:', error);
+          resolve(file); // Fallback to original file
+        }
       };
       
+      img.onerror = () => {
+        clearTimeout(timeout);
+        console.warn('Image failed to load, using original file');
+        resolve(file); // Fallback to original if image loading fails
+      };
+      
+      // Set crossOrigin to avoid CORS issues
+      img.crossOrigin = 'anonymous';
       img.src = URL.createObjectURL(file);
     });
   };
