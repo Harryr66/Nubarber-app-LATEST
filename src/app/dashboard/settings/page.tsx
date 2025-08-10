@@ -128,11 +128,11 @@ function SettingsContent() {
     <div>
       <PageHeader title="Settings" />
       <Tabs defaultValue="shop" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
-          <TabsTrigger value="shop">Shop Details</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
-          <TabsTrigger value="stripe">Stripe</TabsTrigger>
-          <TabsTrigger value="gmb">Google My Business</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="shop" className="text-xs sm:text-sm">Shop Details</TabsTrigger>
+          <TabsTrigger value="appearance" className="text-xs sm:text-sm">Appearance</TabsTrigger>
+          <TabsTrigger value="stripe" className="text-xs sm:text-sm">Stripe</TabsTrigger>
+          <TabsTrigger value="gmb" className="text-xs sm:text-sm">Google My Business</TabsTrigger>
         </TabsList>
         <TabsContent value="shop">
           <Card>

@@ -62,6 +62,7 @@ interface ShopDetails {
     headline?: string;
     description?: string;
     stripeConnected?: boolean;
+    logoUrl?: string;
 }
 
 const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -378,6 +379,18 @@ export default function BarberBookingPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-12 px-4">
+        {/* Prominent Logo Display */}
+        {shopDetails?.logoUrl && (
+          <div className="flex justify-center mb-8">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={shopDetails.logoUrl} alt={`${shopDetails.name} logo`} />
+              <AvatarFallback className="text-2xl font-bold">
+                {shopDetails.name?.charAt(0) || "B"}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Left Column */}
           <div className="lg:col-span-1">
@@ -386,8 +399,10 @@ export default function BarberBookingPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
                     <Avatar className="h-16 w-16">
-                      <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="shop logo" />
-                      <AvatarFallback>{shopDetails?.name?.charAt(0) || "B"}</AvatarFallback>
+                      <AvatarImage src={shopDetails?.logoUrl} alt={`${shopDetails?.name} logo`} />
+                      <AvatarFallback className="text-lg font-semibold">
+                        {shopDetails?.name?.charAt(0) || "B"}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
                       <h2 className="text-xl font-bold">{shopDetails?.name || "Loading..."}</h2>

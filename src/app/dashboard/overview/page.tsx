@@ -165,7 +165,68 @@ export default function OverviewPage() {
   return (
     <div>
       <PageHeader title="Overview" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      
+      {/* Today's Appointments - Full Width Top Section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-xl">Today's Appointments</CardTitle>
+          <CardDescription>
+            {todaysAppointments.length > 0 
+              ? `${todaysAppointments.length} appointment${todaysAppointments.length === 1 ? '' : 's'} scheduled for today`
+              : "Your schedule for today is clear"
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <AppointmentsTableSkeleton />
+          ) : todaysAppointments.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Staff</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {todaysAppointments.map((appt) => (
+                  <TableRow key={appt.id}>
+                    <TableCell className="font-medium">
+                      {appt.bookingTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </TableCell>
+                    <TableCell className="font-medium">{appt.customerName}</TableCell>
+                    <TableCell>{appt.serviceName}</TableCell>
+                    <TableCell>{appt.staffName}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={appt.status === 'Paid' ? 'default' : 'secondary'}
+                        className={cn(
+                          appt.status === 'Paid' && 'bg-green-100 text-green-800 border-green-200',
+                          appt.status === 'Confirmed' && 'bg-blue-100 text-blue-800 border-blue-200'
+                        )}
+                      >
+                        {appt.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-16">
+              <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <p className="font-semibold text-lg mb-2">No appointments scheduled for today</p>
+              <p className="text-muted-foreground">Your schedule for today is clear. Enjoy the downtime!</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Key Metrics - Thumbnail Cards Below */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         {isLoading ? (
           <>
             <StatsCardSkeleton />
@@ -219,76 +280,31 @@ export default function OverviewPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <Card>
-           <CardHeader>
-            <CardTitle>Bookings Overview</CardTitle>
-            <CardDescription>A chart showing total bookings per month for the last 6 months.</CardDescription>
-          </CardHeader>
-          <CardContent>
-             <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-              <BarChart accessibilityLayer data={chartData}>
-                 <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Bar dataKey="total" fill="var(--color-total)" radius={8} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Today's Appointments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? <AppointmentsTableSkeleton /> : todaysAppointments.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {todaysAppointments.map((appt) => (
-                      <TableRow key={appt.id}>
-                        <TableCell>{appt.bookingTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
-                        <TableCell>{appt.customerName}</TableCell>
-                        <TableCell>{appt.serviceName}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={appt.status === 'Paid' ? 'default' : 'secondary'}
-                            className={cn(
-                              appt.status === 'Paid' && 'bg-green-100 text-green-800 border-green-200',
-                              appt.status === 'Confirmed' && 'bg-blue-100 text-blue-800 border-blue-200'
-                            )}
-                          >
-                            {appt.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            ) : (
-                <div className="text-center py-10">
-                  <p className="font-semibold">No appointments scheduled for today.</p>
-                  <p className="text-muted-foreground text-sm">Your schedule for today is clear.</p>
-                </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Bookings Overview Chart - Full Width Bottom Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bookings Overview</CardTitle>
+          <CardDescription>A chart showing total bookings per month for the last 6 months.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+            <BarChart accessibilityLayer data={chartData}>
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                tickFormatter={(value) => value.slice(0, 3)}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel />}
+              />
+              <Bar dataKey="total" fill="var(--color-total)" radius={8} />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
 
     </div>
   );

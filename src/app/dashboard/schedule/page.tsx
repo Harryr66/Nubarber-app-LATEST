@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import PageHeader from "@/components/page-header";
 import { collection, query, where, getDocs, Timestamp, addDoc, deleteDoc, doc } from "firebase/firestore";
-import { isSameDay, getDay, parse, differenceInMinutes } from "date-fns";
+import { isSameDay, getDay, parse, differenceInMinutes, differenceInDays } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -31,7 +31,8 @@ interface TimeOff {
     id: string;
     staffId: string;
     staffName: string;
-    date: Timestamp;
+    startDate: Timestamp;
+    endDate: Timestamp;
     reason: string;
 }
 
@@ -63,6 +64,8 @@ export default function SchedulePage() {
   const [isTimeOffDialogOpen, setIsTimeOffDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState("");
   const [timeOffReason, setTimeOffReason] = useState("");
+  const [timeOffStartDate, setTimeOffStartDate] = useState<Date | undefined>(undefined);
+  const [timeOffEndDate, setTimeOffEndDate] = useState<Date | undefined>(undefined);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -146,17 +149,24 @@ export default function SchedulePage() {
 
 
   const handleBookTimeOff = async () => {
-    if (!user || !selectedStaff || !date || !db) {
-        toast({ title: "Error", description: "Please select a staff member and date.", variant: "destructive" });
+    if (!user || !selectedStaff || !timeOffStartDate || !timeOffEndDate || !db) {
+        toast({ title: "Error", description: "Please select a staff member and date range.", variant: "destructive" });
         return;
     }
+    
+    if (timeOffStartDate > timeOffEndDate) {
+        toast({ title: "Error", description: "Start date must be before end date.", variant: "destructive" });
+        return;
+    }
+    
     try {
         const staffMember = staff.find(s => s.id === selectedStaff);
         await addDoc(collection(db, "timeOff"), {
             shopOwnerId: user.uid,
             staffId: selectedStaff,
             staffName: staffMember?.name || "Unknown Staff",
-            date: Timestamp.fromDate(date),
+            startDate: Timestamp.fromDate(timeOffStartDate),
+            endDate: Timestamp.fromDate(timeOffEndDate),
             reason: timeOffReason || "Personal Time Off",
         });
         toast({ title: "Success", description: "Time off has been booked." });
@@ -164,6 +174,8 @@ export default function SchedulePage() {
         setIsTimeOffDialogOpen(false);
         setSelectedStaff("");
         setTimeOffReason("");
+        setTimeOffStartDate(undefined);
+        setTimeOffEndDate(undefined);
     } catch (error) {
         console.error("Error booking time off:", error);
         toast({ title: "Error", description: "Could not book time off.", variant: "destructive"});
@@ -187,7 +199,11 @@ export default function SchedulePage() {
     : [];
   
   const selectedDayTimeOffs = date
-    ? timeOffEvents.filter(event => isSameDay(event.date.toDate(), date))
+    ? timeOffEvents.filter(event => {
+        const startDate = event.startDate.toDate();
+        const endDate = event.endDate.toDate();
+        return date >= startDate && date <= endDate;
+      })
     : [];
     
   const AppointmentListSkeleton = () => (
@@ -211,6 +227,16 @@ export default function SchedulePage() {
     return "";
   };
 
+  const formatTimeOffDuration = (startDate: Date, endDate: Date) => {
+    const days = differenceInDays(endDate, startDate) + 1;
+    if (days === 1) return "1 day";
+    if (days === 7) return "1 week";
+    if (days === 14) return "2 weeks";
+    if (days === 21) return "3 weeks";
+    if (days === 30 || days === 31) return "1 month";
+    return `${days} days`;
+  };
+
   return (
     <div>
       <PageHeader title="Schedule" actionButton={
@@ -221,7 +247,7 @@ export default function SchedulePage() {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Book Time Off</DialogTitle>
-                    <DialogDescription>Select a staff member and date to block off their schedule.</DialogDescription>
+                    <DialogDescription>Select a staff member and date range to block off their schedule.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
@@ -235,26 +261,64 @@ export default function SchedulePage() {
                             </SelectContent>
                         </Select>
                     </div>
-                     <div className="space-y-2">
-                        <Label>Date</Label>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                    {date ? date.toLocaleDateString() : "Pick a date"}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                            </PopoverContent>
-                        </Popover>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Start Date</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                        {timeOffStartDate ? timeOffStartDate.toLocaleDateString() : "Pick start date"}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar 
+                                        mode="single" 
+                                        selected={timeOffStartDate} 
+                                        onSelect={setTimeOffStartDate} 
+                                        initialFocus
+                                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>End Date</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                        {timeOffEndDate ? timeOffEndDate.toLocaleDateString() : "Pick end date"}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar 
+                                        mode="single" 
+                                        selected={timeOffEndDate} 
+                                        onSelect={setTimeOffEndDate} 
+                                        initialFocus
+                                        disabled={(date) => date < (timeOffStartDate || new Date())}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </div>
+                    {timeOffStartDate && timeOffEndDate && (
+                        <div className="text-sm text-muted-foreground text-center p-2 bg-muted rounded-md">
+                            {formatTimeOffDuration(timeOffStartDate, timeOffEndDate)} of time off
+                        </div>
+                    )}
                     <div className="space-y-2">
                         <Label>Reason (Optional)</Label>
                         <Input value={timeOffReason} onChange={(e) => setTimeOffReason(e.target.value)} placeholder="e.g., Vacation"/>
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsTimeOffDialogOpen(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => {
+                        setIsTimeOffDialogOpen(false);
+                        setSelectedStaff("");
+                        setTimeOffReason("");
+                        setTimeOffStartDate(undefined);
+                        setTimeOffEndDate(undefined);
+                    }}>Cancel</Button>
                     <Button onClick={handleBookTimeOff}>Confirm Time Off</Button>
                 </DialogFooter>
             </DialogContent>
@@ -287,17 +351,37 @@ export default function SchedulePage() {
                   booked: getDayClassName(date || new Date()),
                 }}
                 components={{
-                    Day: ({ date, displayMonth }) => {
-                        const dayClassName = getDayClassName(date);
-                        const isSelected = isSameDay(date, date || new Date());
-                        const isOutside = date.getMonth() !== displayMonth.getMonth();
+                    Day: ({ date: dayDate, displayMonth }) => {
+                        const dayClassName = getDayClassName(dayDate);
+                        const isSelected = isSameDay(dayDate, date || new Date());
+                        const isOutside = dayDate.getMonth() !== displayMonth.getMonth();
+                        const isTimeOff = timeOffEvents.some(event => {
+                            const start = event.startDate.toDate();
+                            const end = event.endDate.toDate();
+                            return dayDate >= start && dayDate <= end;
+                        });
+                        
+                        const timeOffEvent = timeOffEvents.find(event => {
+                            const start = event.startDate.toDate();
+                            const end = event.endDate.toDate();
+                            return dayDate >= start && dayDate <= end;
+                        });
+                        
                         return (
                             <div className={cn("h-9 w-9 p-0 relative", dayClassName, isOutside && "text-muted-foreground opacity-50")}>
                                 <button
-                                    onClick={() => setDate(date)}
-                                    className={cn("w-full h-full flex items-center justify-center rounded-md", isSelected && "bg-primary text-primary-foreground")}
+                                    onClick={() => setDate(dayDate)}
+                                    className={cn(
+                                        "w-full h-full flex items-center justify-center rounded-md", 
+                                        isSelected && "bg-primary text-primary-foreground",
+                                        isTimeOff && "bg-red-100 text-red-800 border border-red-300"
+                                    )}
+                                    title={timeOffEvent ? `${timeOffEvent.staffName} - ${timeOffEvent.reason || 'Time Off'}` : undefined}
                                 >
-                                    {date.getDate()}
+                                    {dayDate.getDate()}
+                                    {isTimeOff && (
+                                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+                                    )}
                                 </button>
                             </div>
                         );
@@ -334,7 +418,15 @@ export default function SchedulePage() {
                           <p className="font-semibold text-red-800">
                             Time Off - {event.staffName}
                           </p>
-                          <p className="text-sm text-red-700">{event.reason}</p>
+                          <p className="text-sm text-red-700">
+                            {event.startDate.toDate().toLocaleDateString()} - {event.endDate.toDate().toLocaleDateString()}
+                            <span className="ml-2 text-xs bg-red-200 px-2 py-1 rounded-full">
+                              {formatTimeOffDuration(event.startDate.toDate(), event.endDate.toDate())}
+                            </span>
+                          </p>
+                          {event.reason && (
+                            <p className="text-sm text-red-700">{event.reason}</p>
+                          )}
                       </div>
                       <Button variant="ghost" size="icon" className="text-red-600 hover:bg-red-100 hover:text-red-700" onClick={() => handleDeleteTimeOff(event.id)}>
                         <Trash2 className="h-4 w-4" />
