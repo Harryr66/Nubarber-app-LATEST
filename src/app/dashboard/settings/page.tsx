@@ -11,9 +11,7 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle, ExternalLink, Loader2, Monitor, Moon, Sun } from "lucide-react";
-import { getGmbAuthUrl } from "@/lib/gmb";
 import { useSearchParams } from "next/navigation";
-import { createStripeConnectAccount } from "@/lib/payments";
 import { useTheme } from "next-themes";
 import PageHeader from "@/components/page-header";
 
@@ -101,13 +99,26 @@ function SettingsContent() {
     }
     setIsConnecting(true);
     try {
-      const { url, error } = await createStripeConnectAccount(user.uid);
-      if (error || !url) {
-        throw new Error(error || "Failed to get Stripe Connect URL");
+      const response = await fetch('/api/stripe/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Failed to get Stripe Connect URL");
       }
-      window.location.href = url;
+      
+      window.location.href = data.url;
     } catch (error) {
-      toast({ title: "Stripe Connection Failed", description: "Could not connect to Stripe. Please try again.", variant: "destructive" });
+      console.error('Stripe connect error:', error);
+      toast({ 
+        title: "Stripe Connection Failed", 
+        description: "Could not connect to Stripe. Please try again.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -116,10 +127,27 @@ function SettingsContent() {
   const handleGmbConnect = async () => {
     setIsConnecting(true);
     try {
-      const url = await getGmbAuthUrl();
-      window.location.href = url;
+      const response = await fetch('/api/gmb/connect');
+      
+      if (!response.ok) {
+        throw new Error('Failed to get Google My Business auth URL');
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      window.location.href = data.url;
     } catch (error) {
-      toast({ title: "Error", description: "Could not connect to Google. Please ensure API credentials are set up correctly.", variant: "destructive" });
+      console.error('GMB connect error:', error);
+      toast({ 
+        title: "Google Connection Failed", 
+        description: "Could not connect to Google. Please ensure API credentials are set up correctly.", 
+        variant: "destructive" 
+      });
+    } finally {
       setIsConnecting(false);
     }
   };
@@ -219,6 +247,12 @@ function SettingsContent() {
                 </div>
               ) : (
                 <>
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> Stripe integration requires server configuration. 
+                      Contact support to enable online payments.
+                    </p>
+                  </div>
                   <p>Connect your Stripe account to start accepting online payments for bookings.</p>
                   <Button onClick={handleStripeConnect} disabled={isConnecting || isLoading}>
                     {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</> : "Connect with Stripe"}
@@ -245,6 +279,12 @@ function SettingsContent() {
                 </div>
               ) : (
                 <>
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> Google My Business integration requires API credentials configuration. 
+                      Contact support to enable business sync.
+                    </p>
+                  </div>
                   <p>Connect your Google My Business profile to keep your online presence up-to-date automatically.</p>
                   <Button onClick={handleGmbConnect} disabled={isConnecting || isLoading}>
                     {isConnecting ? "Connecting..." : "Connect with Google"}

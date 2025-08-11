@@ -25,6 +25,7 @@ export default function PublicSitePage() {
     description: "Easy and fast booking, available 24/7.",
     subdomain: ""
   });
+  const [shopName, setShopName] = useState("");
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,10 +53,23 @@ export default function PublicSitePage() {
         const shopDoc = await getDoc(shopDocRef);
         if (shopDoc.exists()) {
           const data = shopDoc.data();
+          const shopName = data.name || "";
+          const existingSubdomain = data.subdomain || "";
+          
+          // Auto-generate subdomain from shop name if none exists
+          let subdomain = existingSubdomain;
+          if (!existingSubdomain && shopName) {
+            subdomain = shopName
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, '') // Remove special characters
+              .substring(0, 20); // Limit length
+          }
+          
+          setShopName(shopName);
           setSiteSettings({
             headline: data.headline || "Book your next appointment with us",
             description: data.description || "Easy and fast booking, available 24/7.",
-            subdomain: data.subdomain || ""
+            subdomain: subdomain
           });
           setLogoUrl(data.logoUrl || "");
         }
@@ -307,6 +321,25 @@ export default function PublicSitePage() {
 
 
 
+  const regenerateSubdomain = () => {
+    if (shopName) {
+      const newSubdomain = shopName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '') // Remove special characters
+        .substring(0, 20); // Limit length
+      
+      setSiteSettings(prev => ({
+        ...prev,
+        subdomain: newSubdomain
+      }));
+      
+      toast({
+        title: "Subdomain Updated",
+        description: `Generated: ${newSubdomain}.nubarber.com`,
+      });
+    }
+  };
+
   const handleSave = async () => {
     if (!user || !defaultDb) {
       toast({ title: "Not Authenticated", description: "You must be logged in to save settings.", variant: "destructive" });
@@ -319,7 +352,8 @@ export default function PublicSitePage() {
         headline: siteSettings.headline,
         description: siteSettings.description,
         logoUrl: logoUrl,
-        subdomain: siteSettings.subdomain
+        subdomain: siteSettings.subdomain,
+        name: shopName // Also save the shop name
       }, { merge: true });
 
       toast({
@@ -458,9 +492,22 @@ export default function PublicSitePage() {
                         className="flex-1"
                       />
                       <span className="text-sm text-muted-foreground">.nubarber.com</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={regenerateSubdomain}
+                        disabled={!shopName || isSaving}
+                        title="Regenerate subdomain from business name"
+                      >
+                        Regenerate
+                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Choose a unique subdomain for your booking page. This will be your custom URL.
+                      Your custom URL is automatically generated from your business name: <strong>{shopName || 'Loading...'}</strong>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      You can edit this if you want a different subdomain, or click "Regenerate" to use your business name.
                     </p>
                   </div>
                   
@@ -503,10 +550,18 @@ export default function PublicSitePage() {
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground mb-2">Share this link with your clients:</p>
+                  {siteSettings.subdomain && (
+                    <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-700">
+                        <strong>Current:</strong> {origin}/{siteSettings.subdomain}<br/>
+                        <strong>Future:</strong> {siteSettings.subdomain}.nubarber.com (requires DNS setup)
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
-                    <Input readOnly value={siteSettings.subdomain ? `https://${siteSettings.subdomain}.nubarber.com` : `${origin}${publicUrl}`} />
+                    <Input readOnly value={siteSettings.subdomain ? `${origin}/${siteSettings.subdomain}` : `${origin}${publicUrl}`} />
                     <Button variant="secondary" onClick={() => {
-                      const url = siteSettings.subdomain ? `https://${siteSettings.subdomain}.nubarber.com` : `${origin}${publicUrl}`;
+                      const url = siteSettings.subdomain ? `${origin}/${siteSettings.subdomain}` : `${origin}${publicUrl}`;
                       navigator.clipboard.writeText(url);
                       toast({title: "Copied to clipboard"});
                     }}>
@@ -514,7 +569,7 @@ export default function PublicSitePage() {
                     </Button>
                   </div>
                   <Button asChild className="w-full mt-4">
-                      <Link href={siteSettings.subdomain ? `https://${siteSettings.subdomain}.nubarber.com` : publicUrl} target="_blank">
+                      <Link href={siteSettings.subdomain ? `/${siteSettings.subdomain}` : publicUrl} target="_blank">
                         <Eye className="h-4 w-4 mr-2" />
                         Preview Website
                       </Link>

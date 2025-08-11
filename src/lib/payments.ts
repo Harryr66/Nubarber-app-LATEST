@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { getFirebase } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy_key');
 
 interface BookingData {
     bookingId: string;
@@ -71,6 +71,12 @@ export async function createCheckoutSession(bookingData: BookingData) {
 
 export async function createStripeConnectAccount(userId: string): Promise<{ url: string | null; error: string | null }> {
     if (!userId) return { url: null, error: "User not authenticated." };
+    
+    // Check if Stripe is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+        return { url: null, error: "Stripe is not configured. Please contact support." };
+    }
+    
     const { defaultDb } = getFirebase();
     const origin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
 
