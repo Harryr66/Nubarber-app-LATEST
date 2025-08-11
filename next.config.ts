@@ -17,6 +17,15 @@ const nextConfig = {
       "https://*.cluster-73qgvk7hjjadkrjeyexca5ivva.cloudworkstations.dev",
     ],
   },
+  // Add subdomain support
+  async rewrites() {
+    return [
+      {
+        source: '/:subdomain*',
+        destination: '/[subdomain]/:subdomain*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

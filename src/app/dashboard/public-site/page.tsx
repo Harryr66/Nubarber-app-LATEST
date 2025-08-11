@@ -22,7 +22,8 @@ export default function PublicSitePage() {
   const { toast } = useToast();
   const [siteSettings, setSiteSettings] = useState({
     headline: "Book your next appointment with us",
-    description: "Easy and fast booking, available 24/7."
+    description: "Easy and fast booking, available 24/7.",
+    subdomain: ""
   });
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +46,7 @@ export default function PublicSitePage() {
       };
 
       setIsLoading(true);
-      setPublicUrl(`/barbers/${user.uid}`);
+      setPublicUrl(siteSettings.subdomain ? `/${siteSettings.subdomain}` : `/barbers/${user.uid}`);
       try {
         const shopDocRef = doc(defaultDb, "shops", user.uid);
         const shopDoc = await getDoc(shopDocRef);
@@ -53,7 +54,8 @@ export default function PublicSitePage() {
           const data = shopDoc.data();
           setSiteSettings({
             headline: data.headline || "Book your next appointment with us",
-            description: data.description || "Easy and fast booking, available 24/7."
+            description: data.description || "Easy and fast booking, available 24/7.",
+            subdomain: data.subdomain || ""
           });
           setLogoUrl(data.logoUrl || "");
         }
@@ -69,7 +71,7 @@ export default function PublicSitePage() {
     } else {
         setIsLoading(false);
     }
-  }, [user, defaultDb, toast]);
+  }, [user, defaultDb, toast, siteSettings.subdomain]);
 
   const handleLogoUpload = async (file: File) => {
     if (!user || !defaultDb) {
@@ -83,28 +85,28 @@ export default function PublicSitePage() {
       return;
     }
     
-    // Validate file size (max 2MB for better performance)
-    if (file.size > 2 * 1024 * 1024) {
-      toast({ title: "File Too Large", description: "Please select an image smaller than 2MB for faster upload.", variant: "destructive" });
+    // Validate file size (max 1MB for faster uploads)
+    if (file.size > 1 * 1024 * 1024) {
+      toast({ title: "File Too Large", description: "Please select an image smaller than 1MB for faster upload.", variant: "destructive" });
       return;
     }
     
     // Add a simple fallback for very small files (skip optimization)
-    const shouldSkipOptimization = file.size < 100 * 1024; // Skip optimization for files under 100KB
+    const shouldSkipOptimization = file.size < 200 * 1024; // Skip optimization for files under 200KB
     
     setIsUploading(true);
     let retryCount = 0;
     const maxRetries = 2;
     
-        // Add overall timeout protection
+    // Add overall timeout protection - increased to 60 seconds for better reliability
     const uploadTimeout = setTimeout(() => {
       setIsUploading(false);
       toast({ 
         title: "Upload Timeout", 
-        description: "Upload took too long. Please try again with a smaller image.", 
+        description: "Upload is taking longer than expected. Please check your internet connection and try again.", 
         variant: "destructive" 
       });
-    }, 30000); // 30 second timeout
+    }, 60000); // 60 second timeout - more reasonable for larger files
     
     try {
       while (retryCount <= maxRetries) {
@@ -117,8 +119,11 @@ export default function PublicSitePage() {
             fileToUpload = file;
           } else {
             try {
+              console.log('Starting image optimization...');
+              const startTime = Date.now();
               fileToUpload = await optimizeImage(file);
-              console.log('Image optimization successful');
+              const optimizationTime = Date.now() - startTime;
+              console.log(`Image optimization completed in ${optimizationTime}ms`);
             } catch (optimizeError) {
               console.warn('Image optimization failed, using original file:', optimizeError);
               fileToUpload = file;
@@ -132,16 +137,20 @@ export default function PublicSitePage() {
           const path = `logos/${user.uid}/${fileName}`;
           
           console.log('Starting upload to path:', path);
+          const uploadStartTime = Date.now();
           
           // Upload with progress tracking
           const downloadURL = await uploadLogoFile(fileToUpload, path);
           
-          console.log('Upload successful, download URL:', downloadURL);
+          const uploadTime = Date.now() - uploadStartTime;
+          console.log(`Upload completed in ${uploadTime}ms, download URL:`, downloadURL);
           
           // Clean up old logo file if it exists
           if (logoUrl && logoUrl !== downloadURL) {
             try {
+              console.log('Cleaning up old logo...');
               await deleteOldLogo(logoUrl);
+              console.log('Old logo cleanup completed');
             } catch (error) {
               console.warn('Could not delete old logo:', error);
               // Continue even if cleanup fails
@@ -151,8 +160,10 @@ export default function PublicSitePage() {
           setLogoUrl(downloadURL);
           
           // Save to Firestore
+          console.log('Saving to Firestore...');
           const shopDocRef = doc(defaultDb, "shops", user.uid);
           await setDoc(shopDocRef, { logoUrl: downloadURL }, { merge: true });
+          console.log('Firestore update completed');
           
           toast({
             title: "Success!",
@@ -175,17 +186,19 @@ export default function PublicSitePage() {
             });
             break;
           } else {
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            // Wait before retrying with exponential backoff
+            const delay = 1000 * Math.pow(2, retryCount - 1); // 1s, 2s, 4s
+            console.log(`Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }
     } catch (error) {
       console.error('Unexpected error during upload:', error);
-      toast({ 
-        title: "Upload Error", 
-        description: "An unexpected error occurred. Please try again.", 
-        variant: "destructive" 
+      toast({
+        title: "Upload Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
       });
     } finally {
       clearTimeout(uploadTimeout);
@@ -222,10 +235,11 @@ export default function PublicSitePage() {
       const ctx = canvas.getContext('2d');
       const img = new Image();
       
-      // Add timeout protection
+      // Reduce timeout to 5 seconds for faster fallback
       const timeout = setTimeout(() => {
-        reject(new Error('Image optimization timeout'));
-      }, 10000); // 10 second timeout
+        console.warn('Image optimization timeout, using original file');
+        resolve(file); // Don't reject, just use original file
+      }, 5000); // 5 second timeout - faster fallback
       
       img.onload = () => {
         try {
@@ -235,15 +249,18 @@ export default function PublicSitePage() {
           const maxSize = 500;
           let { width, height } = img;
           
-          if (width > height) {
-            if (width > maxSize) {
-              height = (height * maxSize) / width;
-              width = maxSize;
-            }
-          } else {
-            if (height > maxSize) {
-              width = (width * maxSize) / height;
-              height = maxSize;
+          // Only resize if image is significantly larger than target
+          if (width > maxSize * 1.2 || height > maxSize * 1.2) {
+            if (width > height) {
+              if (width > maxSize) {
+                height = (height * maxSize) / width;
+                width = maxSize;
+              }
+            } else {
+              if (height > maxSize) {
+                width = (width * maxSize) / height;
+                height = maxSize;
+              }
             }
           }
           
@@ -259,12 +276,13 @@ export default function PublicSitePage() {
                   type: 'image/jpeg',
                   lastModified: Date.now()
                 });
+                console.log(`Image optimized: ${file.size} -> ${blob.size} bytes`);
                 resolve(optimizedFile);
               } else {
                 console.warn('Canvas toBlob failed, using original file');
                 resolve(file); // Fallback to original if optimization fails
               }
-            }, 'image/jpeg', 0.8); // 80% quality for good balance
+            }, 'image/jpeg', 0.85); // Slightly higher quality for better balance
           } else {
             console.warn('Canvas context not available, using original file');
             resolve(file);
@@ -301,6 +319,7 @@ export default function PublicSitePage() {
         headline: siteSettings.headline,
         description: siteSettings.description,
         logoUrl: logoUrl,
+        subdomain: siteSettings.subdomain
       }, { merge: true });
 
       toast({
@@ -392,7 +411,7 @@ export default function PublicSitePage() {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Upload your shop logo (max 2MB). This will be displayed prominently on your public booking page.
+                          Upload your shop logo (max 1MB). This will be displayed prominently on your public booking page.
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Recommended: Square image, 500x500 pixels or smaller for best performance.
@@ -407,7 +426,7 @@ export default function PublicSitePage() {
                               <div className="bg-blue-600 h-2 rounded-full animate-pulse"></div>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              This may take a few moments for larger images...
+                              Uploading to secure cloud storage... This usually takes 10-30 seconds.
                             </p>
                           </div>
                         )}
@@ -427,6 +446,24 @@ export default function PublicSitePage() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="subdomain">Custom URL</Label>
+                    <div className="flex items-center space-x-2">
+                      <Input 
+                        id="subdomain" 
+                        value={siteSettings.subdomain || ''}
+                        onChange={(e) => setSiteSettings({...siteSettings, subdomain: e.target.value})}
+                        disabled={isSaving}
+                        placeholder="your-business-name"
+                        className="flex-1"
+                      />
+                      <span className="text-sm text-muted-foreground">.nubarber.com</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Choose a unique subdomain for your booking page. This will be your custom URL.
+                    </p>
+                  </div>
+                  
                   <div className="space-y-2">
                     <Label htmlFor="headline">Headline</Label>
                     <Input 
@@ -467,16 +504,17 @@ export default function PublicSitePage() {
                 <>
                   <p className="text-sm text-muted-foreground mb-2">Share this link with your clients:</p>
                   <div className="flex items-center space-x-2">
-                    <Input readOnly value={`${origin}${publicUrl}`} />
+                    <Input readOnly value={siteSettings.subdomain ? `https://${siteSettings.subdomain}.nubarber.com` : `${origin}${publicUrl}`} />
                     <Button variant="secondary" onClick={() => {
-                      navigator.clipboard.writeText(`${origin}${publicUrl}`);
+                      const url = siteSettings.subdomain ? `https://${siteSettings.subdomain}.nubarber.com` : `${origin}${publicUrl}`;
+                      navigator.clipboard.writeText(url);
                       toast({title: "Copied to clipboard"});
                     }}>
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
                   <Button asChild className="w-full mt-4">
-                      <Link href={publicUrl} target="_blank">
+                      <Link href={siteSettings.subdomain ? `/${siteSettings.subdomain}` : publicUrl} target="_blank">
                         <Eye className="h-4 w-4 mr-2" />
                         Preview Website
                       </Link>
