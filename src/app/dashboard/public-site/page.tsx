@@ -66,6 +66,7 @@ export default function PublicSitePage() {
           }
           
           setShopName(shopName);
+          console.log('Setting subdomain:', subdomain, 'from shop name:', shopName);
           setSiteSettings({
             headline: data.headline || "Book your next appointment with us",
             description: data.description || "Easy and fast booking, available 24/7.",
@@ -85,7 +86,7 @@ export default function PublicSitePage() {
     } else {
         setIsLoading(false);
     }
-  }, [user, defaultDb, toast, siteSettings.subdomain]);
+  }, [user, defaultDb, toast]);
 
   const handleLogoUpload = async (file: File) => {
     if (!user || !defaultDb) {
@@ -347,6 +348,7 @@ export default function PublicSitePage() {
     }
     setIsSaving(true);
     try {
+      console.log('Saving subdomain:', siteSettings.subdomain);
       const shopDocRef = doc(defaultDb, "shops", user.uid);
       await setDoc(shopDocRef, { 
         headline: siteSettings.headline,
@@ -569,11 +571,16 @@ export default function PublicSitePage() {
                     </Button>
                   </div>
                   <Button asChild className="w-full mt-4">
-                      <Link href={siteSettings.subdomain ? `/${siteSettings.subdomain}` : publicUrl} target="_blank">
+                      <Link href={siteSettings.subdomain ? `${origin}/${siteSettings.subdomain}` : `${origin}${publicUrl}`} target="_blank">
                         <Eye className="h-4 w-4 mr-2" />
                         Preview Website
                       </Link>
                     </Button>
+                    {siteSettings.subdomain && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Debug: Preview URL will be {origin}/{siteSettings.subdomain}
+                      </p>
+                    )}
                 </>
               )}
             </CardContent>
