@@ -514,7 +514,7 @@ export default function PublicSitePage() {
                     </Button>
                   </div>
                   <Button asChild className="w-full mt-4">
-                      <Link href={siteSettings.subdomain ? `/${siteSettings.subdomain}` : publicUrl} target="_blank">
+                      <Link href={siteSettings.subdomain ? `https://${siteSettings.subdomain}.nubarber.com` : publicUrl} target="_blank">
                         <Eye className="h-4 w-4 mr-2" />
                         Preview Website
                       </Link>

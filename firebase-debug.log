@@ -1,0 +1,31 @@
+[debug] [2025-08-11T03:27:58.696Z] ----------------------------------------------------------------------
+[debug] [2025-08-11T03:27:58.701Z] Command:       /Users/harry/.nvm/versions/node/v22.17.0/bin/node /Users/harry/.nvm/versions/node/v22.17.0/bin/firebase login
+[debug] [2025-08-11T03:27:58.702Z] CLI Version:   14.12.0
+[debug] [2025-08-11T03:27:58.702Z] Platform:      darwin
+[debug] [2025-08-11T03:27:58.702Z] Node Version:  v22.17.0
+[debug] [2025-08-11T03:27:58.702Z] Time:          Mon Aug 11 2025 11:27:58 GMT+0800 (Australian Western Standard Time)
+[debug] [2025-08-11T03:27:58.702Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-08-11T03:27:58.703Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2025-08-11T03:27:58.825Z] Object "/hosting/frameworksBackend" in "firebase.json" has unknown property: {"additionalProperty":"appId"}
+[debug] [2025-08-11T03:27:58.826Z] Field "/hosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2025-08-11T03:27:58.826Z] Field "/hosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[info] i  The Firebase CLI’s MCP server feature can optionally make use of Gemini in Firebase. Learn more about Gemini in Firebase and how it uses your data: https://firebase.google.com/docs/gemini-in-firebase#how-gemini-in-firebase-uses-your-data 
+[debug] [2025-08-11T03:27:59.368Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2025-08-11T03:27:59.369Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[info] 
+[info] i  Firebase optionally collects CLI and Emulator Suite usage and error reporting information to help improve our products. Data is collected in accordance with Google's privacy policy (https://policies.google.com/privacy) and is not used to identify you. 
+[debug] [2025-08-11T03:36:41.651Z] ----------------------------------------------------------------------
+[debug] [2025-08-11T03:36:41.653Z] Command:       /Users/harry/.nvm/versions/node/v22.17.0/bin/node /Users/harry/.nvm/versions/node/v22.17.0/bin/firebase login
+[debug] [2025-08-11T03:36:41.653Z] CLI Version:   14.12.0
+[debug] [2025-08-11T03:36:41.653Z] Platform:      darwin
+[debug] [2025-08-11T03:36:41.653Z] Node Version:  v22.17.0
+[debug] [2025-08-11T03:36:41.653Z] Time:          Mon Aug 11 2025 11:36:41 GMT+0800 (Australian Western Standard Time)
+[debug] [2025-08-11T03:36:41.653Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-08-11T03:36:41.746Z] Object "/hosting/frameworksBackend" in "firebase.json" has unknown property: {"additionalProperty":"appId"}
+[debug] [2025-08-11T03:36:41.746Z] Field "/hosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2025-08-11T03:36:41.746Z] Field "/hosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[info] i  The Firebase CLI’s MCP server feature can optionally make use of Gemini in Firebase. Learn more about Gemini in Firebase and how it uses your data: https://firebase.google.com/docs/gemini-in-firebase#how-gemini-in-firebase-uses-your-data 
+[info] 
+[info] i  Firebase optionally collects CLI and Emulator Suite usage and error reporting information to help improve our products. Data is collected in accordance with Google's privacy policy (https://policies.google.com/privacy) and is not used to identify you. 

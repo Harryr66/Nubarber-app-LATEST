@@ -24,6 +24,11 @@ const nextConfig = {
         source: '/:subdomain*',
         destination: '/[subdomain]/:subdomain*',
       },
+      // Handle legacy /barbers/ routes
+      {
+        source: '/barbers/:username*',
+        destination: '/[subdomain]/:username*',
+      },
     ];
   },
 };

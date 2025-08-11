@@ -1,0 +1,23 @@
+{
+  "rewrites": [
+    {
+      "source": "/:subdomain*",
+      "destination": "/[subdomain]/:subdomain*"
+    },
+    {
+      "source": "/barbers/:username*",
+      "destination": "/[subdomain]/:username*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
+  ]
+} 
