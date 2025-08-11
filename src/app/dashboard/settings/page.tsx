@@ -155,6 +155,24 @@ function SettingsContent() {
   return (
     <div>
       <PageHeader title="Settings" />
+      
+      {/* Help Section */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+        <h3 className="text-lg font-semibold text-blue-800 mb-2">🔧 Integration Setup Guide</h3>
+        <p className="text-sm text-blue-700 mb-3">
+          Set up your business integrations to accept payments and manage your online presence. 
+          Each integration has step-by-step instructions below.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-blue-600">
+          <div>
+            <strong>💳 Stripe:</strong> Accept online payments for bookings
+          </div>
+          <div>
+            <strong>🌐 Google My Business:</strong> Sync business information and manage reviews
+          </div>
+        </div>
+      </div>
+      
       <Tabs defaultValue="shop" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="shop" className="text-xs sm:text-sm">Shop Details</TabsTrigger>
@@ -236,9 +254,14 @@ function SettingsContent() {
                 <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <CheckCircle className="h-8 w-8 text-green-600" />
                   <div>
-                    <p className="font-semibold text-green-800">Your Stripe account is connected.</p>
-                    <p className="text-sm text-green-700">You can now accept online payments.</p>
-                    <Button variant="link" asChild className="p-0 h-auto mt-1 text-green-800">
+                    <p className="font-semibold text-green-800">✅ Stripe Connected Successfully!</p>
+                    <p className="text-sm text-green-700 mb-2">You can now accept online payments for bookings.</p>
+                    <div className="space-y-1 text-xs text-green-600">
+                      <p>• Customers can pay online when booking</p>
+                      <p>• Secure payment processing</p>
+                      <p>• Automatic payment collection</p>
+                    </div>
+                    <Button variant="link" asChild className="p-0 h-auto mt-2 text-green-800">
                       <a href={`https://dashboard.stripe.com/connect/accounts/${shopDetails.stripeAccountId}`} target="_blank" rel="noopener noreferrer">
                         Go to Stripe Dashboard <ExternalLink className="h-4 w-4 ml-1" />
                       </a>
@@ -247,14 +270,32 @@ function SettingsContent() {
                 </div>
               ) : (
                 <>
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
-                    <p className="text-sm text-yellow-800">
-                      <strong>Note:</strong> Stripe integration requires server configuration. 
-                      Contact support to enable online payments.
-                    </p>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                    <h4 className="font-semibold text-blue-800 mb-2">🚀 Set Up Stripe Payments</h4>
+                    <div className="space-y-2 text-sm text-blue-700">
+                      <p><strong>Step 1:</strong> Click "Connect with Stripe" below</p>
+                      <p><strong>Step 2:</strong> Complete Stripe's onboarding process</p>
+                      <p><strong>Step 3:</strong> Verify your business information</p>
+                      <p><strong>Step 4:</strong> Start accepting online payments!</p>
+                    </div>
                   </div>
-                  <p>Connect your Stripe account to start accepting online payments for bookings.</p>
-                  <Button onClick={handleStripeConnect} disabled={isConnecting || isLoading}>
+                  
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">💳 What You'll Get</h4>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      <li>• Secure credit card processing</li>
+                      <li>• Automatic payment collection</li>
+                      <li>• Professional checkout experience</li>
+                      <li>• 24/7 payment acceptance</li>
+                    </ul>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Connect your Stripe account to start accepting online payments for bookings. 
+                    Stripe handles all the security and compliance for you.
+                  </p>
+                  
+                  <Button onClick={handleStripeConnect} disabled={isConnecting || isLoading} className="w-full">
                     {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</> : "Connect with Stripe"}
                   </Button>
                 </>
@@ -273,20 +314,43 @@ function SettingsContent() {
                 <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg w-full">
                   <CheckCircle className="h-8 w-8 text-green-600" />
                   <div className="max-w-full break-words text-green-800">
-                    <p className="font-semibold">Your Google My Business account is connected.</p>
-                    <p className="text-sm">Your business information can now be synced.</p>
+                    <p className="font-semibold">✅ Google My Business Connected Successfully!</p>
+                    <p className="text-sm mb-2">Your business information can now be synced automatically.</p>
+                    <div className="space-y-1 text-xs text-green-600">
+                      <p>• Business info automatically updated</p>
+                      <p>• Review management enabled</p>
+                      <p>• Hours and location sync</p>
+                    </div>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
-                    <p className="text-sm text-yellow-800">
-                      <strong>Note:</strong> Google My Business integration requires API credentials configuration. 
-                      Contact support to enable business sync.
-                    </p>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                    <h4 className="font-semibold text-blue-800 mb-2">🌐 Set Up Google My Business</h4>
+                    <div className="space-y-2 text-sm text-blue-700">
+                      <p><strong>Step 1:</strong> Click "Connect with Google" below</p>
+                      <p><strong>Step 2:</strong> Sign in with your Google account</p>
+                      <p><strong>Step 3:</strong> Grant permission to manage your business</p>
+                      <p><strong>Step 4:</strong> Sync your business information!</p>
+                    </div>
                   </div>
-                  <p>Connect your Google My Business profile to keep your online presence up-to-date automatically.</p>
-                  <Button onClick={handleGmbConnect} disabled={isConnecting || isLoading}>
+                  
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">📱 What You'll Get</h4>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      <li>• Automatic business info sync</li>
+                      <li>• Review management</li>
+                      <li>• Business hours updates</li>
+                      <li>• Location and contact sync</li>
+                    </ul>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Connect your Google My Business profile to keep your online presence up-to-date automatically. 
+                    This helps customers find accurate information about your business.
+                  </p>
+                  
+                  <Button onClick={handleGmbConnect} disabled={isConnecting || isLoading} className="w-full">
                     {isConnecting ? "Connecting..." : "Connect with Google"}
                   </Button>
                 </>

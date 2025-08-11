@@ -1,12 +1,20 @@
 {
   "rewrites": [
     {
-      "source": "/:subdomain*",
-      "destination": "/[subdomain]/:subdomain*"
+      "source": "/:subdomain",
+      "destination": "/[subdomain]"
     },
     {
-      "source": "/barbers/:username*",
-      "destination": "/[subdomain]/:username*"
+      "source": "/:subdomain/:path*",
+      "destination": "/[subdomain]/:path*"
+    },
+    {
+      "source": "/barbers/:username",
+      "destination": "/[subdomain]"
+    },
+    {
+      "source": "/barbers/:username/:path*",
+      "destination": "/[subdomain]/:path*"
     }
   ],
   "headers": [

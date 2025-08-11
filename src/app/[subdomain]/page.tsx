@@ -75,6 +75,10 @@ export default function SubdomainBarberPage() {
   const params = useParams();
   const { toast } = useToast();
   const subdomain = params.subdomain as string;
+  
+  // Debug logging
+  console.log('SubdomainBarberPage loaded with params:', params);
+  console.log('Subdomain value:', subdomain);
 
   // --- State Management ---
   const [services, setServices] = useState<Service[]>([]);
@@ -101,12 +105,18 @@ export default function SubdomainBarberPage() {
   // --- Data Fetching ---
   useEffect(() => {
     const fetchShopData = async () => {
-      if (!subdomain) return;
+      if (!subdomain) {
+        console.log('No subdomain provided');
+        return;
+      }
       
       try {
         setIsLoading(true);
+        console.log('Fetching shop data for subdomain:', subdomain);
+        
         const defaultDb = getUserDb();
         if (!defaultDb) {
+          console.error('Database connection failed');
           toast({ title: "Error", description: "Database connection failed.", variant: "destructive" });
           return;
         }
@@ -114,9 +124,13 @@ export default function SubdomainBarberPage() {
         // First, find the shop by subdomain
         const shopsRef = collection(defaultDb, "shops");
         const subdomainQuery = query(shopsRef, where("subdomain", "==", subdomain));
+        console.log('Querying shops collection for subdomain:', subdomain);
+        
         const subdomainSnapshot = await getDocs(subdomainQuery);
+        console.log('Query result:', subdomainSnapshot.empty ? 'No shops found' : 'Shop found');
         
         if (subdomainSnapshot.empty) {
+          console.log('No shop found for subdomain:', subdomain);
           toast({ title: "Shop Not Found", description: "This booking page doesn't exist.", variant: "destructive" });
           return;
         }
