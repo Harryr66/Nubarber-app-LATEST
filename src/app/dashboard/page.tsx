@@ -146,8 +146,8 @@ export default function DashboardAuthPage() {
         // 1. Create the Shop Document
         const shopDocRef = doc(db, "shops", user.uid);
         
-        // Generate a subdomain from the shop name
-        const subdomain = shopName
+        // Generate a domain from the shop name (e.g., "Harry's Barbers" -> "harrysbarbers")
+        const domain = shopName
           .toLowerCase()
           .replace(/[^a-z0-9]/g, '') // Remove special characters
           .substring(0, 20); // Limit length
@@ -160,7 +160,7 @@ export default function DashboardAuthPage() {
           address: locationType === 'physical' ? address : "Mobile",
           staffCount: parseInt(staffCount, 10),
           ownerId: user.uid, // Add ownerId for security rules
-          subdomain: subdomain, // Add subdomain for routing
+          domain: domain, // Add domain for routing (e.g., harrysbarbers.nubarber.com)
         });
 
         // 2. Pre-install staff members with guaranteed availability

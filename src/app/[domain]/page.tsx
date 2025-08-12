@@ -66,7 +66,7 @@ interface ShopDetails {
     description?: string;
     stripeConnected?: boolean;
     logoUrl?: string;
-    subdomain?: string;
+    domain?: string;
 }
 
 const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -74,11 +74,11 @@ const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"
 export default function SubdomainBarberPage() {
   const params = useParams();
   const { toast } = useToast();
-  const subdomain = params.subdomain as string;
+  const domain = params.domain as string;
   
   // Debug logging
   console.log('SubdomainBarberPage loaded with params:', params);
-  console.log('Subdomain value:', subdomain);
+  console.log('Subdomain value:', domain);
 
   // --- State Management ---
   const [services, setServices] = useState<Service[]>([]);
@@ -105,14 +105,14 @@ export default function SubdomainBarberPage() {
   // --- Data Fetching ---
   useEffect(() => {
     const fetchShopData = async () => {
-      if (!subdomain) {
-        console.log('No subdomain provided');
+      if (!domain) {
+        console.log('No domain provided');
         return;
       }
       
       try {
         setIsLoading(true);
-        console.log('Fetching shop data for subdomain:', subdomain);
+        console.log('Fetching shop data for domain:', domain);
         
         const defaultDb = getUserDb();
         if (!defaultDb) {
@@ -121,27 +121,27 @@ export default function SubdomainBarberPage() {
           return;
         }
 
-        // First, try to find the shop by subdomain
+        // First, try to find the shop by domain
         const shopsRef = collection(defaultDb, "shops");
-        let subdomainQuery = query(shopsRef, where("subdomain", "==", subdomain));
-        console.log('Querying shops collection for subdomain:', subdomain);
-        console.log('Query details:', { collection: 'shops', field: 'subdomain', value: subdomain });
+        let domainQuery = query(shopsRef, where("domain", "==", domain));
+        console.log('Querying shops collection for domain:', domain);
+        console.log('Query details:', { collection: 'shops', field: 'domain', value: domain });
         
-        let subdomainSnapshot = await getDocs(subdomainQuery);
-        console.log('Subdomain query result:', subdomainSnapshot.empty ? 'No shops found' : 'Shop found');
-        console.log('Number of docs returned:', subdomainSnapshot.size);
+        let domainSnapshot = await getDocs(domainQuery);
+        console.log('Subdomain query result:', domainSnapshot.empty ? 'No shops found' : 'Shop found');
+        console.log('Number of docs returned:', domainSnapshot.size);
         
-        // If no shop found by subdomain, try to find by username (userId)
-        if (subdomainSnapshot.empty) {
-          console.log('No shop found by subdomain, trying to find by username...');
+        // If no shop found by domain, try to find by username (userId)
+        if (domainSnapshot.empty) {
+          console.log('No shop found by domain, trying to find by username...');
           
-          // Try to find the shop by userId (assuming subdomain might be the userId)
-          const userIdQuery = query(shopsRef, where("__name__", "==", subdomain));
+          // Try to find the shop by userId (assuming domain might be the userId)
+          const userIdQuery = query(shopsRef, where("__name__", "==", domain));
           const userIdSnapshot = await getDocs(userIdQuery);
           
           if (!userIdSnapshot.empty) {
-            console.log('Found shop by userId:', subdomain);
-            subdomainSnapshot = userIdSnapshot;
+            console.log('Found shop by userId:', domain);
+            domainSnapshot = userIdSnapshot;
           } else {
             console.log('No shop found by userId either');
             
@@ -150,7 +150,7 @@ export default function SubdomainBarberPage() {
             console.log('Available shops in collection:');
             allShopsSnapshot.forEach(doc => {
               const data = doc.data();
-              console.log('Shop:', { id: doc.id, name: data.name, subdomain: data.subdomain });
+              console.log('Shop:', { id: doc.id, name: data.name, domain: data.domain });
             });
             
             toast({ title: "Shop Not Found", description: "This booking page doesn't exist.", variant: "destructive" });
@@ -158,7 +158,7 @@ export default function SubdomainBarberPage() {
           }
         }
 
-        const shopDoc = subdomainSnapshot.docs[0];
+        const shopDoc = domainSnapshot.docs[0];
         const shopData = shopDoc.data() as ShopDetails;
         const userId = shopDoc.id;
         
@@ -182,7 +182,7 @@ export default function SubdomainBarberPage() {
     };
 
     fetchShopData();
-  }, [subdomain, toast]);
+  }, [domain, toast]);
 
   const fetchServices = async (userId: string) => {
     try {

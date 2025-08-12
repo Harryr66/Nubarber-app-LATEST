@@ -23,7 +23,7 @@ export default function PublicSitePage() {
   const [siteSettings, setSiteSettings] = useState({
     headline: "Book your next appointment with us",
     description: "Easy and fast booking, available 24/7.",
-    subdomain: ""
+    domain: ""
   });
   const [shopName, setShopName] = useState("");
   const [logoUrl, setLogoUrl] = useState<string>("");
@@ -47,30 +47,30 @@ export default function PublicSitePage() {
       };
 
       setIsLoading(true);
-      setPublicUrl(siteSettings.subdomain ? `/${siteSettings.subdomain}` : `/barbers/${user.uid}`);
+      setPublicUrl(siteSettings.domain ? `/${siteSettings.domain}` : `/barbers/${user.uid}`);
       try {
         const shopDocRef = doc(defaultDb, "shops", user.uid);
         const shopDoc = await getDoc(shopDocRef);
         if (shopDoc.exists()) {
           const data = shopDoc.data();
           const shopName = data.name || "";
-          const existingSubdomain = data.subdomain || "";
+          const existingSubdomain = data.domain || "";
           
-          // Auto-generate subdomain from shop name if none exists
-          let subdomain = existingSubdomain;
+          // Auto-generate domain from shop name if none exists
+          let domain = existingSubdomain;
           if (!existingSubdomain && shopName) {
-            subdomain = shopName
+            domain = shopName
               .toLowerCase()
               .replace(/[^a-z0-9]/g, '') // Remove special characters
               .substring(0, 20); // Limit length
           }
           
           setShopName(shopName);
-          console.log('Setting subdomain:', subdomain, 'from shop name:', shopName);
+          console.log('Setting domain:', domain, 'from shop name:', shopName);
           setSiteSettings({
             headline: data.headline || "Book your next appointment with us",
             description: data.description || "Easy and fast booking, available 24/7.",
-            subdomain: subdomain
+            domain: domain
           });
           setLogoUrl(data.logoUrl || "");
         }
@@ -322,22 +322,6 @@ export default function PublicSitePage() {
 
 
 
-  const regenerateSubdomain = () => {
-    if (shopName) {
-      const newSubdomain = shopName
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '') // Remove special characters
-        .substring(0, 20); // Limit length
-      
-      setSiteSettings(prev => ({
-        ...prev,
-        subdomain: newSubdomain
-      }));
-      
-      toast({
-        title: "Subdomain Updated",
-        description: `Generated: ${newSubdomain}.nubarber.com`,
-      });
     }
   };
 
@@ -348,7 +332,7 @@ export default function PublicSitePage() {
     }
     setIsSaving(true);
     try {
-      console.log('Saving subdomain:', siteSettings.subdomain);
+      console.log('Saving domain:', siteSettings.domain);
       console.log('Saving shop name:', shopName);
       console.log('User ID:', user.uid);
       
@@ -357,7 +341,7 @@ export default function PublicSitePage() {
         headline: siteSettings.headline,
         description: siteSettings.description,
         logoUrl: logoUrl,
-        subdomain: siteSettings.subdomain,
+        domain: siteSettings.domain,
         name: shopName // Also save the shop name
       };
       
@@ -492,33 +476,25 @@ export default function PublicSitePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subdomain">Custom URL</Label>
+                  <div className="space-y-2">
+                    <Label>Your Booking Website URL</Label>
                     <div className="flex items-center space-x-2">
                       <Input 
-                        id="subdomain" 
-                        value={siteSettings.subdomain || ''}
-                        onChange={(e) => setSiteSettings({...siteSettings, subdomain: e.target.value})}
-                        disabled={isSaving}
-                        placeholder="your-business-name"
-                        className="flex-1"
+                        value={siteSettings.domain || '} 
+                        readOnly 
+                        className="flex-1 font-mono bg-gray-50" 
                       />
                       <span className="text-sm text-muted-foreground">.nubarber.com</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={regenerateSubdomain}
-                        disabled={!shopName || isSaving}
-                        title="Regenerate subdomain from business name"
-                      >
-                        Regenerate
-                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Your custom URL is automatically generated from your business name: <strong>{shopName || 'Loading...'}</strong>
                     </p>
+                    <p className="text-xs text-blue-600">
+                      This URL cannot be changed and will be your permanent booking website address.
+                    </p>
+                  </div>                    </p>
                     <p className="text-xs text-muted-foreground">
-                      You can edit this if you want a different subdomain, or click "Regenerate" to use your business name.
+                      You can edit this if you want a different domain, or click "Regenerate" to use your business name.
                     </p>
                   </div>
                   
@@ -561,18 +537,18 @@ export default function PublicSitePage() {
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground mb-2">Share this link with your clients:</p>
-                  {siteSettings.subdomain && (
+                  {siteSettings.domain && (
                     <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-xs text-blue-700">
-                        <strong>Current:</strong> {origin}/{siteSettings.subdomain}<br/>
-                        <strong>Future:</strong> {siteSettings.subdomain}.nubarber.com (requires DNS setup)
+                        <strong>Current:</strong> {origin}/{siteSettings.domain}<br/>
+                        <strong>Future:</strong> {siteSettings.domain}.nubarber.com (requires DNS setup)
                       </p>
                     </div>
                   )}
                   <div className="flex items-center space-x-2">
-                    <Input readOnly value={siteSettings.subdomain ? `${origin}/${siteSettings.subdomain}` : `${origin}${publicUrl}`} />
+                    <Input readOnly value={siteSettings.domain ? `${origin}/${siteSettings.domain}` : `${origin}${publicUrl}`} />
                     <Button variant="secondary" onClick={() => {
-                      const url = siteSettings.subdomain ? `${origin}/${siteSettings.subdomain}` : `${origin}${publicUrl}`;
+                      const url = siteSettings.domain ? `${origin}/${siteSettings.domain}` : `${origin}${publicUrl}`;
                       navigator.clipboard.writeText(url);
                       toast({title: "Copied to clipboard"});
                     }}>
@@ -580,14 +556,14 @@ export default function PublicSitePage() {
                     </Button>
                   </div>
                   <Button asChild className="w-full mt-4">
-                      <Link href={siteSettings.subdomain ? `${origin}/${siteSettings.subdomain}` : `${origin}${publicUrl}`} target="_blank">
+                      <Link href={siteSettings.domain ? `${origin}/${siteSettings.domain}` : `${origin}${publicUrl}`} target="_blank">
                         <Eye className="h-4 w-4 mr-2" />
                         Preview Website
                       </Link>
                     </Button>
-                    {siteSettings.subdomain && (
+                    {siteSettings.domain && (
                       <p className="text-xs text-muted-foreground mt-2">
-                        Debug: Preview URL will be {origin}/{siteSettings.subdomain}
+                        Debug: Preview URL will be {origin}/{siteSettings.domain}
                       </p>
                     )}
                 </>
