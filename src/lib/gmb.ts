@@ -1,5 +1,5 @@
 
-'use server';
+
 
 import { google } from 'googleapis';
 
