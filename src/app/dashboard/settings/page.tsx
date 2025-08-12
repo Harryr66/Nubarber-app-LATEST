@@ -27,8 +27,8 @@ function SettingsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [stripeKeys, setStripeKeys] = useState({ publishableKey: "", secretKey: "" });
-  const [gmbKeys, setGmbKeys] = useState({ clientId: "", clientSecret: "", redirectUri: "" });
+  const [stripeKeys, setStripeKeys] = useState({ publishableKey: "" });
+  const [gmbKeys, setGmbKeys] = useState({ clientId: "", redirectUri: "" });
 
   useEffect(() => {
     if (searchParams.get('stripe_connected')) {
@@ -106,8 +106,7 @@ function SettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           userId: user.uid,
-          publishableKey: stripeKeys.publishableKey,
-          secretKey: stripeKeys.secretKey
+          publishableKey: stripeKeys.publishableKey
         })
       });
       
@@ -117,12 +116,12 @@ function SettingsContent() {
         throw new Error(data.error || "Failed to get Stripe Connect URL");
       }
       
-      // Save the keys to the user's shop document
+      // Only save the publishable key (safe to store)
       if (defaultDb) {
         const shopDocRef = doc(defaultDb, "shops", user.uid);
         await setDoc(shopDocRef, { 
           stripePublishableKey: stripeKeys.publishableKey,
-          stripeSecretKey: stripeKeys.secretKey
+          stripeConnected: true
         }, { merge: true });
       }
       
@@ -147,7 +146,6 @@ function SettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: gmbKeys.clientId,
-          clientSecret: gmbKeys.clientSecret,
           redirectUri: gmbKeys.redirectUri
         })
       });
@@ -162,13 +160,13 @@ function SettingsContent() {
         throw new Error(data.error);
       }
       
-      // Save the keys to the user's shop document
+      // Only save the client ID and redirect URI (safe to store)
       if (defaultDb && user) {
         const shopDocRef = doc(defaultDb, "shops", user.uid);
         await setDoc(shopDocRef, { 
           gmbClientId: gmbKeys.clientId,
-          gmbClientSecret: gmbKeys.clientSecret,
-          gmbRedirectUri: gmbKeys.redirectUri
+          gmbRedirectUri: gmbKeys.redirectUri,
+          gmbConnected: true
         }, { merge: true });
       }
       
@@ -332,35 +330,18 @@ function SettingsContent() {
                     </ul>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="stripePublishableKey">Stripe Publishable Key</Label>
-                      <Input
-                        id="stripePublishableKey"
-                        placeholder="pk_live_... or pk_test_..."
-                        value={stripeKeys.publishableKey}
-                        onChange={(e) => setStripeKeys({...stripeKeys, publishableKey: e.target.value})}
-                        className="font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Find this in your Stripe Dashboard → Developers → API keys
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="stripeSecretKey">Stripe Secret Key</Label>
-                      <Input
-                        id="stripeSecretKey"
-                        type="password"
-                        placeholder="sk_live_... or sk_test_..."
-                        value={stripeKeys.secretKey}
-                        onChange={(e) => setStripeKeys({...stripeKeys, secretKey: e.target.value})}
-                        className="font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Keep this secret! Never share it publicly.
-                      </p>
-                    </div>
+                  <div>
+                    <Label htmlFor="stripePublishableKey">Stripe Publishable Key</Label>
+                    <Input
+                      id="stripePublishableKey"
+                      placeholder="pk_live_... or pk_test_..."
+                      value={stripeKeys.publishableKey}
+                      onChange={(e) => setStripeKeys({...stripeKeys, publishableKey: e.target.value})}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Find this in your Stripe Dashboard → Developers → API keys
+                    </p>
                   </div>
                   
                   <p className="text-sm text-muted-foreground mb-4">
@@ -368,7 +349,7 @@ function SettingsContent() {
                     You can get these from your <a href="https://dashboard.stripe.com/apikeys" target="_blank" className="text-blue-600 hover:underline">Stripe Dashboard</a>.
                   </p>
                   
-                  <Button onClick={handleStripeConnect} disabled={isConnecting || isLoading || !stripeKeys.publishableKey || !stripeKeys.secretKey} className="w-full">
+                  <Button onClick={handleStripeConnect} disabled={isConnecting || isLoading || !stripeKeys.publishableKey} className="w-full">
                     {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</> : "Connect with Stripe"}
                   </Button>
                 </>
@@ -433,20 +414,7 @@ function SettingsContent() {
                       </p>
                     </div>
                     
-                    <div>
-                      <Label htmlFor="gmbClientSecret">Google Client Secret</Label>
-                      <Input
-                        id="gmbClientSecret"
-                        type="password"
-                        placeholder="your_client_secret"
-                        value={gmbKeys.clientSecret}
-                        onChange={(e) => setGmbKeys({...gmbKeys, clientSecret: e.target.value})}
-                        className="font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Keep this secret! Never share it publicly.
-                      </p>
-                    </div>
+
                     
                     <div>
                       <Label htmlFor="gmbRedirectUri">Redirect URI</Label>
@@ -468,7 +436,7 @@ function SettingsContent() {
                     You can get these from <a href="https://console.cloud.google.com/" target="_blank" className="text-blue-600 hover:underline">Google Cloud Console</a>.
                   </p>
                   
-                  <Button onClick={handleGmbConnect} disabled={isConnecting || isLoading || !gmbKeys.clientId || !gmbKeys.clientSecret || !gmbKeys.redirectUri} className="w-full">
+                  <Button onClick={handleGmbConnect} disabled={isConnecting || isLoading || !gmbKeys.clientId || !gmbKeys.redirectUri} className="w-full">
                     {isConnecting ? "Connecting..." : "Connect with Google"}
                   </Button>
                 </>

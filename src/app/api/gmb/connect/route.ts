@@ -3,17 +3,22 @@ import { getGmbAuthUrl } from '@/lib/gmb';
 
 export async function POST(request: NextRequest) {
   try {
-    const { clientId, clientSecret, redirectUri } = await request.json();
+    const { clientId, redirectUri } = await request.json();
     
-    if (!clientId || !clientSecret || !redirectUri) {
-      return NextResponse.json({ error: 'Google API credentials are required' }, { status: 400 });
+    if (!clientId || !redirectUri) {
+      return NextResponse.json({ error: 'Google client ID and redirect URI are required' }, { status: 400 });
     }
 
-    // Create OAuth2 client with user's credentials
+    // Use server-side Google configuration
+    if (!process.env.GMB_CLIENT_SECRET) {
+      return NextResponse.json({ error: 'Google My Business is not configured on the server. Please contact support.' }, { status: 500 });
+    }
+
+    // Create OAuth2 client with server-side secret
     const { google } = await import('googleapis');
     const oauth2Client = new google.auth.OAuth2(
       clientId,
-      clientSecret,
+      process.env.GMB_CLIENT_SECRET, // Use server-side secret
       redirectUri
     );
 

@@ -3,15 +3,19 @@ import { createStripeConnectAccount } from '@/lib/payments';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, publishableKey, secretKey } = await request.json();
+    const { userId, publishableKey } = await request.json();
     
-    if (!userId || !publishableKey || !secretKey) {
-      return NextResponse.json({ error: 'User ID and Stripe keys are required' }, { status: 400 });
+    if (!userId || !publishableKey) {
+      return NextResponse.json({ error: 'User ID and Stripe publishable key are required' }, { status: 400 });
     }
 
-    // Create a new Stripe instance with user's keys
+    // Use server-side Stripe configuration
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ error: 'Stripe is not configured on the server. Please contact support.' }, { status: 500 });
+    }
+
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(secretKey);
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     
     try {
       // Test the keys by creating a test account
