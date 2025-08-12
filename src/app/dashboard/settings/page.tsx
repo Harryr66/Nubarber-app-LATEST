@@ -171,6 +171,15 @@ function SettingsContent() {
             <strong>🌐 Google My Business:</strong> Sync business information and manage reviews
           </div>
         </div>
+        <div className="mt-3">
+          <a 
+            href="/setup-guide" 
+            className="text-sm text-blue-600 hover:text-blue-800 underline"
+            target="_blank"
+          >
+            📖 View Detailed Setup Guide
+          </a>
+        </div>
       </div>
       
       <Tabs defaultValue="shop" className="w-full">
@@ -280,6 +289,13 @@ function SettingsContent() {
                     </div>
                   </div>
                   
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                    <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Setup Required</h4>
+                    <p className="text-sm text-yellow-700">
+                      Stripe integration requires server configuration. Contact support to enable online payments.
+                    </p>
+                  </div>
+                  
                   <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4">
                     <h4 className="font-semibold text-gray-800 mb-2">💳 What You'll Get</h4>
                     <ul className="text-sm text-gray-700 space-y-1">
@@ -333,6 +349,13 @@ function SettingsContent() {
                       <p><strong>Step 3:</strong> Grant permission to manage your business</p>
                       <p><strong>Step 4:</strong> Sync your business information!</p>
                     </div>
+                  </div>
+                  
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                    <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Setup Required</h4>
+                    <p className="text-sm text-yellow-700">
+                      Google My Business integration requires API credentials. Contact support to enable business sync.
+                    </p>
                   </div>
                   
                   <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4">
