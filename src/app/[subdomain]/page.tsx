@@ -125,12 +125,23 @@ export default function SubdomainBarberPage() {
         const shopsRef = collection(defaultDb, "shops");
         const subdomainQuery = query(shopsRef, where("subdomain", "==", subdomain));
         console.log('Querying shops collection for subdomain:', subdomain);
+        console.log('Query details:', { collection: 'shops', field: 'subdomain', value: subdomain });
         
         const subdomainSnapshot = await getDocs(subdomainQuery);
         console.log('Query result:', subdomainSnapshot.empty ? 'No shops found' : 'Shop found');
+        console.log('Number of docs returned:', subdomainSnapshot.size);
         
         if (subdomainSnapshot.empty) {
           console.log('No shop found for subdomain:', subdomain);
+          console.log('Available shops in collection:');
+          
+          // Debug: Let's see what shops exist
+          const allShopsSnapshot = await getDocs(shopsRef);
+          allShopsSnapshot.forEach(doc => {
+            const data = doc.data();
+            console.log('Shop:', { id: doc.id, name: data.name, subdomain: data.subdomain });
+          });
+          
           toast({ title: "Shop Not Found", description: "This booking page doesn't exist.", variant: "destructive" });
           return;
         }

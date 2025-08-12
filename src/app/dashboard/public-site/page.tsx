@@ -349,14 +349,23 @@ export default function PublicSitePage() {
     setIsSaving(true);
     try {
       console.log('Saving subdomain:', siteSettings.subdomain);
+      console.log('Saving shop name:', shopName);
+      console.log('User ID:', user.uid);
+      
       const shopDocRef = doc(defaultDb, "shops", user.uid);
-      await setDoc(shopDocRef, { 
+      const dataToSave = { 
         headline: siteSettings.headline,
         description: siteSettings.description,
         logoUrl: logoUrl,
         subdomain: siteSettings.subdomain,
         name: shopName // Also save the shop name
-      }, { merge: true });
+      };
+      
+      console.log('Data to save:', dataToSave);
+      
+      await setDoc(shopDocRef, dataToSave, { merge: true });
+      
+      console.log('Save successful!');
 
       toast({
         title: "Success!",
