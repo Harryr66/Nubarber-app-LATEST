@@ -27,6 +27,8 @@ function SettingsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [stripeKeys, setStripeKeys] = useState({ publishableKey: "", secretKey: "" });
+  const [gmbKeys, setGmbKeys] = useState({ clientId: "", clientSecret: "", redirectUri: "" });
 
   useEffect(() => {
     if (searchParams.get('stripe_connected')) {
@@ -102,13 +104,26 @@ function SettingsContent() {
       const response = await fetch('/api/stripe/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid })
+        body: JSON.stringify({ 
+          userId: user.uid,
+          publishableKey: stripeKeys.publishableKey,
+          secretKey: stripeKeys.secretKey
+        })
       });
       
       const data = await response.json();
       
       if (!response.ok || data.error) {
         throw new Error(data.error || "Failed to get Stripe Connect URL");
+      }
+      
+      // Save the keys to the user's shop document
+      if (defaultDb) {
+        const shopDocRef = doc(defaultDb, "shops", user.uid);
+        await setDoc(shopDocRef, { 
+          stripePublishableKey: stripeKeys.publishableKey,
+          stripeSecretKey: stripeKeys.secretKey
+        }, { merge: true });
       }
       
       window.location.href = data.url;
@@ -127,7 +142,15 @@ function SettingsContent() {
   const handleGmbConnect = async () => {
     setIsConnecting(true);
     try {
-      const response = await fetch('/api/gmb/connect');
+      const response = await fetch('/api/gmb/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: gmbKeys.clientId,
+          clientSecret: gmbKeys.clientSecret,
+          redirectUri: gmbKeys.redirectUri
+        })
+      });
       
       if (!response.ok) {
         throw new Error('Failed to get Google My Business auth URL');
@@ -137,6 +160,16 @@ function SettingsContent() {
       
       if (data.error) {
         throw new Error(data.error);
+      }
+      
+      // Save the keys to the user's shop document
+      if (defaultDb && user) {
+        const shopDocRef = doc(defaultDb, "shops", user.uid);
+        await setDoc(shopDocRef, { 
+          gmbClientId: gmbKeys.clientId,
+          gmbClientSecret: gmbKeys.clientSecret,
+          gmbRedirectUri: gmbKeys.redirectUri
+        }, { merge: true });
       }
       
       window.location.href = data.url;
@@ -282,18 +315,11 @@ function SettingsContent() {
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
                     <h4 className="font-semibold text-blue-800 mb-2">🚀 Set Up Stripe Payments</h4>
                     <div className="space-y-2 text-sm text-blue-700">
-                      <p><strong>Step 1:</strong> Click "Connect with Stripe" below</p>
-                      <p><strong>Step 2:</strong> Complete Stripe's onboarding process</p>
-                      <p><strong>Step 3:</strong> Verify your business information</p>
+                      <p><strong>Step 1:</strong> Get your Stripe API keys from your Stripe dashboard</p>
+                      <p><strong>Step 2:</strong> Enter your keys below</p>
+                      <p><strong>Step 3:</strong> Click "Connect with Stripe"</p>
                       <p><strong>Step 4:</strong> Start accepting online payments!</p>
                     </div>
-                  </div>
-                  
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
-                    <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Setup Required</h4>
-                    <p className="text-sm text-yellow-700">
-                      Stripe integration requires server configuration. Contact support to enable online payments.
-                    </p>
                   </div>
                   
                   <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4">
@@ -306,12 +332,43 @@ function SettingsContent() {
                     </ul>
                   </div>
                   
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="stripePublishableKey">Stripe Publishable Key</Label>
+                      <Input
+                        id="stripePublishableKey"
+                        placeholder="pk_live_... or pk_test_..."
+                        value={stripeKeys.publishableKey}
+                        onChange={(e) => setStripeKeys({...stripeKeys, publishableKey: e.target.value})}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Find this in your Stripe Dashboard → Developers → API keys
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="stripeSecretKey">Stripe Secret Key</Label>
+                      <Input
+                        id="stripeSecretKey"
+                        type="password"
+                        placeholder="sk_live_... or sk_test_..."
+                        value={stripeKeys.secretKey}
+                        onChange={(e) => setStripeKeys({...stripeKeys, secretKey: e.target.value})}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Keep this secret! Never share it publicly.
+                      </p>
+                    </div>
+                  </div>
+                  
                   <p className="text-sm text-muted-foreground mb-4">
-                    Connect your Stripe account to start accepting online payments for bookings. 
-                    Stripe handles all the security and compliance for you.
+                    Enter your Stripe API keys to start accepting online payments. 
+                    You can get these from your <a href="https://dashboard.stripe.com/apikeys" target="_blank" className="text-blue-600 hover:underline">Stripe Dashboard</a>.
                   </p>
                   
-                  <Button onClick={handleStripeConnect} disabled={isConnecting || isLoading} className="w-full">
+                  <Button onClick={handleStripeConnect} disabled={isConnecting || isLoading || !stripeKeys.publishableKey || !stripeKeys.secretKey} className="w-full">
                     {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</> : "Connect with Stripe"}
                   </Button>
                 </>
@@ -344,18 +401,11 @@ function SettingsContent() {
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
                     <h4 className="font-semibold text-blue-800 mb-2">🌐 Set Up Google My Business</h4>
                     <div className="space-y-2 text-sm text-blue-700">
-                      <p><strong>Step 1:</strong> Click "Connect with Google" below</p>
-                      <p><strong>Step 2:</strong> Sign in with your Google account</p>
-                      <p><strong>Step 3:</strong> Grant permission to manage your business</p>
+                      <p><strong>Step 1:</strong> Get your Google API credentials from Google Cloud Console</p>
+                      <p><strong>Step 2:</strong> Enter your credentials below</p>
+                      <p><strong>Step 3:</strong> Click "Connect with Google"</p>
                       <p><strong>Step 4:</strong> Sync your business information!</p>
                     </div>
-                  </div>
-                  
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
-                    <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Setup Required</h4>
-                    <p className="text-sm text-yellow-700">
-                      Google My Business integration requires API credentials. Contact support to enable business sync.
-                    </p>
                   </div>
                   
                   <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4">
@@ -368,12 +418,57 @@ function SettingsContent() {
                     </ul>
                   </div>
                   
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="gmbClientId">Google Client ID</Label>
+                      <Input
+                        id="gmbClientId"
+                        placeholder="your_client_id.apps.googleusercontent.com"
+                        value={gmbKeys.clientId}
+                        onChange={(e) => setGmbKeys({...gmbKeys, clientId: e.target.value})}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Find this in Google Cloud Console → APIs & Services → Credentials
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="gmbClientSecret">Google Client Secret</Label>
+                      <Input
+                        id="gmbClientSecret"
+                        type="password"
+                        placeholder="your_client_secret"
+                        value={gmbKeys.clientSecret}
+                        onChange={(e) => setGmbKeys({...gmbKeys, clientSecret: e.target.value})}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Keep this secret! Never share it publicly.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="gmbRedirectUri">Redirect URI</Label>
+                      <Input
+                        id="gmbRedirectUri"
+                        placeholder="https://yourdomain.com/api/gmb/callback"
+                        value={gmbKeys.redirectUri}
+                        onChange={(e) => setGmbKeys({...gmbKeys, redirectUri: e.target.value})}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Set this in your Google Cloud Console OAuth 2.0 settings
+                      </p>
+                    </div>
+                  </div>
+                  
                   <p className="text-sm text-muted-foreground mb-4">
-                    Connect your Google My Business profile to keep your online presence up-to-date automatically. 
-                    This helps customers find accurate information about your business.
+                    Enter your Google API credentials to sync your business information. 
+                    You can get these from <a href="https://console.cloud.google.com/" target="_blank" className="text-blue-600 hover:underline">Google Cloud Console</a>.
                   </p>
                   
-                  <Button onClick={handleGmbConnect} disabled={isConnecting || isLoading} className="w-full">
+                  <Button onClick={handleGmbConnect} disabled={isConnecting || isLoading || !gmbKeys.clientId || !gmbKeys.clientSecret || !gmbKeys.redirectUri} className="w-full">
                     {isConnecting ? "Connecting..." : "Connect with Google"}
                   </Button>
                 </>
