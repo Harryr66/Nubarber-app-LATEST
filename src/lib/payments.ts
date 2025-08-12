@@ -1,6 +1,8 @@
 
 
 
+'use server';
+
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { getFirebase } from "./firebase";
@@ -67,9 +69,6 @@ export async function createCheckoutSession(bookingData: BookingData) {
         return { url: null, error: `Could not create Stripe checkout session: ${errorMessage}` };
     }
 }
-
-
-'use server';
 
 export async function createStripeConnectAccount(userId: string): Promise<{ url: string | null; error: string | null }> {
     if (!userId) return { url: null, error: "User not authenticated." };
