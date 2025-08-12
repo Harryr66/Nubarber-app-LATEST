@@ -145,6 +145,13 @@ export default function DashboardAuthPage() {
 
         // 1. Create the Shop Document
         const shopDocRef = doc(db, "shops", user.uid);
+        
+        // Generate a subdomain from the shop name
+        const subdomain = shopName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '') // Remove special characters
+          .substring(0, 20); // Limit length
+        
         batch.set(shopDocRef, {
           name: shopName,
           region: region,
@@ -153,6 +160,7 @@ export default function DashboardAuthPage() {
           address: locationType === 'physical' ? address : "Mobile",
           staffCount: parseInt(staffCount, 10),
           ownerId: user.uid, // Add ownerId for security rules
+          subdomain: subdomain, // Add subdomain for routing
         });
 
         // 2. Pre-install staff members with guaranteed availability

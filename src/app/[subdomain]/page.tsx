@@ -121,35 +121,48 @@ export default function SubdomainBarberPage() {
           return;
         }
 
-        // First, find the shop by subdomain
+        // First, try to find the shop by subdomain
         const shopsRef = collection(defaultDb, "shops");
-        const subdomainQuery = query(shopsRef, where("subdomain", "==", subdomain));
+        let subdomainQuery = query(shopsRef, where("subdomain", "==", subdomain));
         console.log('Querying shops collection for subdomain:', subdomain);
         console.log('Query details:', { collection: 'shops', field: 'subdomain', value: subdomain });
         
-        const subdomainSnapshot = await getDocs(subdomainQuery);
-        console.log('Query result:', subdomainSnapshot.empty ? 'No shops found' : 'Shop found');
+        let subdomainSnapshot = await getDocs(subdomainQuery);
+        console.log('Subdomain query result:', subdomainSnapshot.empty ? 'No shops found' : 'Shop found');
         console.log('Number of docs returned:', subdomainSnapshot.size);
         
+        // If no shop found by subdomain, try to find by username (userId)
         if (subdomainSnapshot.empty) {
-          console.log('No shop found for subdomain:', subdomain);
-          console.log('Available shops in collection:');
+          console.log('No shop found by subdomain, trying to find by username...');
           
-          // Debug: Let's see what shops exist
-          const allShopsSnapshot = await getDocs(shopsRef);
-          allShopsSnapshot.forEach(doc => {
-            const data = doc.data();
-            console.log('Shop:', { id: doc.id, name: data.name, subdomain: data.subdomain });
-          });
+          // Try to find the shop by userId (assuming subdomain might be the userId)
+          const userIdQuery = query(shopsRef, where("__name__", "==", subdomain));
+          const userIdSnapshot = await getDocs(userIdQuery);
           
-          toast({ title: "Shop Not Found", description: "This booking page doesn't exist.", variant: "destructive" });
-          return;
+          if (!userIdSnapshot.empty) {
+            console.log('Found shop by userId:', subdomain);
+            subdomainSnapshot = userIdSnapshot;
+          } else {
+            console.log('No shop found by userId either');
+            
+            // Debug: Let's see what shops exist
+            const allShopsSnapshot = await getDocs(shopsRef);
+            console.log('Available shops in collection:');
+            allShopsSnapshot.forEach(doc => {
+              const data = doc.data();
+              console.log('Shop:', { id: doc.id, name: data.name, subdomain: data.subdomain });
+            });
+            
+            toast({ title: "Shop Not Found", description: "This booking page doesn't exist.", variant: "destructive" });
+            return;
+          }
         }
 
         const shopDoc = subdomainSnapshot.docs[0];
         const shopData = shopDoc.data() as ShopDetails;
         const userId = shopDoc.id;
         
+        console.log('Found shop:', { userId, shopData });
         setShopDetails(shopData);
 
         // Fetch services, staff, etc. using the found userId
