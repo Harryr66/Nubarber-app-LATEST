@@ -69,6 +69,8 @@ export async function createCheckoutSession(bookingData: BookingData) {
 }
 
 
+'use server';
+
 export async function createStripeConnectAccount(userId: string): Promise<{ url: string | null; error: string | null }> {
     if (!userId) return { url: null, error: "User not authenticated." };
     

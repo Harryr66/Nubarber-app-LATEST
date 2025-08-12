@@ -99,15 +99,19 @@ function SettingsContent() {
     }
     setIsConnecting(true);
     try {
-      // Import the function dynamically to avoid SSR issues
-      const { createStripeConnectAccount } = await import('@/lib/payments');
-      const result = await createStripeConnectAccount(user.uid);
+      const response = await fetch('/api/stripe/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid })
+      });
       
-      if (result.error || !result.url) {
-        throw new Error(result.error || "Failed to get Stripe Connect URL");
+      const data = await response.json();
+      
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Failed to get Stripe Connect URL");
       }
       
-      window.location.href = result.url;
+      window.location.href = data.url;
     } catch (error) {
       console.error('Stripe connect error:', error);
       toast({ 
@@ -123,10 +127,19 @@ function SettingsContent() {
   const handleGmbConnect = async () => {
     setIsConnecting(true);
     try {
-      // Import the function dynamically to avoid SSR issues
-      const { getGmbAuthUrl } = await import('@/lib/gmb');
-      const url = await getGmbAuthUrl();
-      window.location.href = url;
+      const response = await fetch('/api/gmb/connect');
+      
+      if (!response.ok) {
+        throw new Error('Failed to get Google My Business auth URL');
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      window.location.href = data.url;
     } catch (error) {
       console.error('GMB connect error:', error);
       toast({ 
