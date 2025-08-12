@@ -4,11 +4,14 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"], 
+  variable: "--font-inter" 
+});
 
 export const metadata: Metadata = {
   title: "NuBarber",
-  description: "Barbershop booking platform",
+  description: "The All-in-One Platform for Modern Barbers",
 };
 
 export default function RootLayout({
@@ -18,17 +21,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Special+Gothic+Expanded+One&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet" />
+      </head>
+      <body className={`${inter.variable} font-body antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
           {children}
           <Toaster />
-          {/* Build timestamp to force fresh deployments */}
-          <div style={{ display: 'none' }}>Build: {new Date().toISOString()}</div>
         </ThemeProvider>
       </body>
     </html>

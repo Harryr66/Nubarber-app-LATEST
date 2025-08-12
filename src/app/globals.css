@@ -78,6 +78,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  .font-body {
+    font-family: 'Special Gothic Expanded One', 'Inter', sans-serif;
+  }
   .heatmap-green {
     @apply bg-green-100 dark:bg-green-900/50;
   }
