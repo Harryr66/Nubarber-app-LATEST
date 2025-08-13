@@ -1,0 +1,34 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the user is the owner of the shop
+    function isShopOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Rules for the 'shops' collection
+    match /shops/{userId} {
+      // Anyone can read shop details for the booking page
+      allow read: if true;
+      // Only the authenticated owner can create, update, or delete their own shop document
+      allow write: if isShopOwner(userId);
+    }
+    
+    // Rules for 'services', 'staff', 'clients', 'bookings', 'timeOff' collections
+    // These collections are identified by the shop owner's userId
+    match /{collection}/{docId} {
+       allow read: if resource.data.shopOwnerId == request.auth.uid || resource.data.userId == request.auth.uid;
+       allow write: if request.resource.data.userId == request.auth.uid || request.resource.data.shopOwnerId == request.auth.uid;
+    }
+
+    // Public Booking Rules
+    // Anyone can create a booking, but only the shop owner can read or modify them.
+    match /bookings/{bookingId} {
+      allow create: if true;
+      allow read, update, delete: if isShopOwner(resource.data.shopOwnerId);
+    }
+  }
+}
