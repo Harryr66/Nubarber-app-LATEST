@@ -1,15 +1,15 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Dashboard from './components/Dashboard';
-import ServicesManagement from './components/ServicesManagement';
-import Login from './components/Login';
+import CustomerManagement from './CustomerManagement';
+import StaffManagement from './StaffManagement';
+import ManualBooking from './ManualBooking';
 
 const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/services" element={<ServicesManagement />} />
+        <Route path="/" element={<CustomerManagement />} />
+        <Route path="/staff" element={<StaffManagement />} />
+        <Route path="/booking" element={<ManualBooking />} />
       </Routes>
     </Router>
   );
